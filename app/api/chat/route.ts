@@ -38,10 +38,7 @@ export async function POST(req: Request) {
     temperature: 0.7,
     maxTokens: 2000,
     onFinish: (result) => {
-      console.log(`\n=== Complete AI Response (AI SDK) ===`);
-      console.log('Response:', result.text);
-      console.log('Token usage:', result.usage);
-      console.log('==================================\n');
+      console.log(`\nToken usage:`, result.usage);
     },
   });
 

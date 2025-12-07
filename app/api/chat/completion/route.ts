@@ -75,11 +75,7 @@ export async function POST(request: NextRequest) {
               }
             }
 
-            // Print final response
-            console.log('\n\n=== Complete AI Response ===');
-            console.log(fullResponse);
-            console.log('=========================\n');
-
+  
             controller.enqueue(encoder.encode('data: [DONE]\n\n'));
           } catch (error) {
             console.error('Streaming error:', error);
