@@ -36,7 +36,7 @@ export async function POST(req: Request) {
     model: openrouter(model) as any,
     messages,
     temperature: 0.7,
-    maxTokens: 2000,
+    maxTokens: 8000,
     onFinish: (result) => {
       console.log(`\nToken usage:`, result.usage);
     },
