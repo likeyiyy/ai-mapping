@@ -1,80 +1,77 @@
+import OpenAI from 'openai';
+
 interface OpenRouterMessage {
   role: 'user' | 'assistant' | 'system';
   content: string;
 }
 
-interface OpenRouterResponse {
-  choices: {
-    message: {
-      content: string;
-    };
-  }[];
-  usage?: {
-    prompt_tokens: number;
-    completion_tokens: number;
-    total_tokens: number;
-  };
-}
+const openrouter = new OpenAI({
+  apiKey: process.env.OPENROUTER_API_KEY || '',
+  baseURL: 'https://openrouter.ai/api/v1',
+  defaultHeaders: {
+    'HTTP-Referer': process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000',
+    'X-Title': 'AI Mind Map',
+  }
+});
 
 export async function callOpenRouterAPI(
   messages: OpenRouterMessage[],
   model: string,
   stream: boolean = false
 ): Promise<string | ReadableStream<Uint8Array>> {
-  const apiKey = process.env.OPENROUTER_API_KEY;
-
-  if (!apiKey) {
+  if (!process.env.OPENROUTER_API_KEY) {
     throw new Error('OpenRouter API key is not configured');
   }
 
-  const requestBody = {
-    model: model,
-    messages: messages,
-    temperature: 0.7,
-    max_tokens: 8000,
-    stream: stream,
-  };
-
-  if (stream) {
-    // Handle streaming response
-    const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${apiKey}`,
-        'Content-Type': 'application/json; charset=utf-8',
-        'HTTP-Referer': process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000',
-        'X-Title': 'AI Mind Map',
-      },
-      body: JSON.stringify(requestBody),
+  try {
+    const completion = await openrouter.chat.completions.create({
+      model: model,
+      messages: messages,
+      temperature: 0.7,
+      max_tokens: 8000,
+      stream: stream,
     });
 
-    if (!response.ok) {
-      const error = await response.json().catch(() => ({ error: 'Unknown error' }));
-      throw new Error(`OpenRouter API error: ${response.status} - ${error.error?.message || error.error}`);
+    if (stream) {
+      // Convert the stream to match the expected format
+      const encoder = new TextEncoder();
+
+      const readable = new ReadableStream({
+        async start(controller) {
+          try {
+            // Type the completion as a stream
+            const streamCompletion = completion as any;
+            for await (const chunk of streamCompletion) {
+              // Transform the chunk to match the expected SSE format
+              const data = {
+                choices: [{
+                  delta: {
+                    content: chunk.choices[0]?.delta?.content || ''
+                  }
+                }]
+              };
+              const content = chunk.choices[0]?.delta?.content;
+              if (content) {
+                controller.enqueue(encoder.encode(`data: ${JSON.stringify(data)}\n\n`));
+              }
+            }
+            controller.enqueue(encoder.encode('data: [DONE]\n\n'));
+          } catch (error) {
+            controller.error(error);
+          } finally {
+            controller.close();
+          }
+        }
+      });
+
+      return readable;
+    } else {
+      // Non-streaming response
+      const response = completion as any;
+      return response.choices[0]?.message?.content || 'No response received';
     }
-
-    // Return the response body as a stream
-    return response.body!;
-  } else {
-    // Non-streaming response
-    const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${apiKey}`,
-        'Content-Type': 'application/json; charset=utf-8',
-        'HTTP-Referer': process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000',
-        'X-Title': 'AI Mind Map',
-      },
-      body: JSON.stringify(requestBody),
-    });
-
-    if (!response.ok) {
-      const error = await response.json().catch(() => ({ error: 'Unknown error' }));
-      throw new Error(`OpenRouter API error: ${response.status} - ${error.error?.message || error.error}`);
-    }
-
-    const data: OpenRouterResponse = await response.json();
-    return data.choices[0]?.message?.content || 'No response received';
+  } catch (error: any) {
+    throw new Error(`OpenRouter API error: ${error.message || error}`);
   }
 }
 
