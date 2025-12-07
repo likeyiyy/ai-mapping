@@ -1,7 +1,7 @@
 import { openai } from '@ai-sdk/openai';
 import { streamText } from 'ai';
 import { createOpenAI } from '@ai-sdk/openai';
-import { DEFAULT_AI_MODEL } from './constants';
+import { DEFAULT_AI_MODEL } from '@/lib/constants';
 
 // 配置OpenRouter
 const openrouter = createOpenAI({
