@@ -38,7 +38,7 @@ export default function AIPreview({ content, isVisible, style }: AIPreviewProps)
       className="absolute bg-white rounded-lg shadow-lg border border-gray-200 z-50"
       style={{
         ...style,
-        width: Math.max(400, typeof style.width === 'number' ? style.width : 400),
+        width: Math.max(600, typeof style.width === 'number' ? style.width : 600),
         maxHeight: '400px',
         overflowY: 'auto',
       }}
