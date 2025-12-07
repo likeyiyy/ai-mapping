@@ -350,7 +350,7 @@ export default function MindMapInteractive({
                 {/* AI回复展开内容 */}
                 {isExpanded && aiResponse && (
                   <foreignObject
-                    x={pos.x - 100}
+                    x={pos.x}
                     y={pos.y + pos.height + 10}
                     width={pos.width + 400}
                     height={400}
