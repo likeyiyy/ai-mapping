@@ -54,8 +54,8 @@ export default function MessageNode({ id, data, selected }: MessageNodeProps) {
           style={{ background: '#9CA3AF', width: 10, height: 10 }}
         />
         <div
-          className={`px-4 py-3 bg-white rounded-lg border-2 shadow-lg min-w-[350px] max-w-[450px] animate-pulse ${
-            selected ? 'border-blue-600 bg-blue-50' : 'border-blue-500'
+          className={`px-4 py-3 rounded-lg border-2 shadow-lg min-w-[350px] max-w-[450px] animate-pulse ${
+            selected ? 'bg-blue-50 border-blue-600' : 'bg-blue-50 border-blue-400'
           }`}
           style={{ minWidth: '350px' }}
         >
@@ -126,10 +126,10 @@ export default function MessageNode({ id, data, selected }: MessageNodeProps) {
         style={{ background: '#9CA3AF', width: 10, height: 10 }}
       />
       <div
-        className={`relative px-4 py-3 bg-white rounded-lg border-2 shadow-lg min-w-[350px] max-w-[450px] transition-all hover:shadow-xl cursor-pointer ${
+        className={`relative px-4 py-3 rounded-lg border-2 shadow-lg min-w-[350px] max-w-[450px] transition-all hover:shadow-xl cursor-pointer ${
           selected
-            ? 'border-indigo-600 shadow-indigo-100 bg-indigo-50/30'
-            : 'border-blue-500 hover:border-blue-600'
+            ? 'bg-blue-50 border-blue-600 shadow-blue-200 shadow-lg'
+            : 'bg-white border-gray-300 hover:border-gray-400 hover:shadow-md'
         }`}
         style={{ minWidth: '350px' }}
         onClick={handleNodeClick}
