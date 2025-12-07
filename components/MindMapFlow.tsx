@@ -8,6 +8,8 @@ import ReactFlow, {
   useNodesState,
   useEdgesState,
   Panel,
+  Handle,
+  Position,
 } from 'reactflow';
 import { Controls } from '@reactflow/controls';
 import { Background } from '@reactflow/background';
@@ -32,6 +34,11 @@ const MessageNode = ({ id, data, selected }: { id: string; data: any; selected?:
   if (data.isNew) {
     return (
       <div className="relative">
+        <Handle
+          type="target"
+          position={Position.Left}
+          style={{ background: '#9CA3AF', width: 10, height: 10 }}
+        />
         <div
           className={`px-4 py-3 bg-white rounded-lg border-2 ${selected ? 'border-blue-600' : 'border-blue-500'} shadow-lg min-w-[300px] max-w-[400px] animate-pulse`}
           style={{ minWidth: '300px' }}
@@ -67,56 +74,73 @@ const MessageNode = ({ id, data, selected }: { id: string; data: any; selected?:
             }}
           />
         </div>
+        <Handle
+          type="source"
+          position={Position.Right}
+          style={{ background: '#9CA3AF', width: 10, height: 10 }}
+        />
       </div>
     );
   }
 
   return (
-    <div
-      className={`px-4 py-3 bg-white rounded-lg border-2 shadow-lg min-w-[300px] max-w-[400px] transition-all hover:shadow-xl ${
-        selected ? 'border-blue-600' : 'border-blue-500'
-      }`}
-      style={{ minWidth: '300px' }}
-    >
-      {/* Header */}
-      <div className="flex items-center justify-between mb-2 pb-2 border-b border-gray-200">
-        <div className="flex items-center gap-2">
-          {data.type === 'user' ? (
-            <User className="w-4 h-4 text-blue-600" />
-          ) : (
-            <Bot className="w-4 h-4 text-emerald-600" />
+    <div className="relative">
+      <Handle
+        type="target"
+        position={Position.Left}
+        style={{ background: '#9CA3AF', width: 10, height: 10 }}
+      />
+      <div
+        className={`px-4 py-3 bg-white rounded-lg border-2 shadow-lg min-w-[300px] max-w-[400px] transition-all hover:shadow-xl ${
+          selected ? 'border-blue-600' : 'border-blue-500'
+        }`}
+        style={{ minWidth: '300px' }}
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between mb-2 pb-2 border-b border-gray-200">
+          <div className="flex items-center gap-2">
+            {data.type === 'user' ? (
+              <User className="w-4 h-4 text-blue-600" />
+            ) : (
+              <Bot className="w-4 h-4 text-emerald-600" />
+            )}
+            <span className="text-sm font-medium text-gray-700">
+              {data.type === 'user' ? '用户' : data.model || 'AI'}
+            </span>
+          </div>
+          {data.type === 'user' && data.hasAIResponse && (
+            <button
+              onClick={() => setPreviewVisible(!previewVisible)}
+              className="text-xs text-blue-600 hover:text-blue-800"
+            >
+              {previewVisible ? '隐藏' : '查看'}回复
+            </button>
           )}
-          <span className="text-sm font-medium text-gray-700">
-            {data.type === 'user' ? '用户' : data.model || 'AI'}
-          </span>
         </div>
-        {data.type === 'user' && data.hasAIResponse && (
-          <button
-            onClick={() => setPreviewVisible(!previewVisible)}
-            className="text-xs text-blue-600 hover:text-blue-800"
-          >
-            {previewVisible ? '隐藏' : '查看'}回复
-          </button>
+
+        {/* Content */}
+        <div className="text-sm text-gray-800">
+          {data.content || (
+            <span className="text-gray-400 italic">加载中...</span>
+          )}
+        </div>
+
+        {/* AI Preview */}
+        {data.type === 'user' && data.aiResponse && previewVisible && (
+          <div className="mt-3 pt-3 border-t border-gray-200">
+            <AIPreview
+              content={data.aiResponse}
+              isVisible={true}
+              style={{ position: 'static', width: '100%' }}
+            />
+          </div>
         )}
       </div>
-
-      {/* Content */}
-      <div className="text-sm text-gray-800">
-        {data.content || (
-          <span className="text-gray-400 italic">加载中...</span>
-        )}
-      </div>
-
-      {/* AI Preview */}
-      {data.type === 'user' && data.aiResponse && previewVisible && (
-        <div className="mt-3 pt-3 border-t border-gray-200">
-          <AIPreview
-            content={data.aiResponse}
-            isVisible={true}
-            style={{ position: 'static', width: '100%' }}
-          />
-        </div>
-      )}
+      <Handle
+        type="source"
+        position={Position.Right}
+        style={{ background: '#9CA3AF', width: 10, height: 10 }}
+      />
     </div>
   );
 };
@@ -197,20 +221,30 @@ export default function MindMapFlow({
     return nodes;
   }, [conversationTree]);
 
-  // Convert edges
+  // Convert edges - only connect user nodes
   const initialEdges: Edge[] = useMemo(() => {
     const edges: Edge[] = [];
 
     if (conversationTree) {
       conversationTree.nodes.forEach((node, nodeId) => {
-        if (node.parentId) {
-          edges.push({
-            id: `${node.parentId}-${nodeId}`,
-            source: node.parentId,
-            target: nodeId,
-            type: 'smoothstep',
-            style: { stroke: '#9CA3AF', strokeWidth: 2 },
-          });
+        // Only create edges for user nodes
+        if (node.type === 'user' && node.parentId) {
+          // Check if parent is also a user node
+          const parentNode = conversationTree.nodes.get(node.parentId);
+          if (parentNode && parentNode.type === 'user') {
+            edges.push({
+              id: `${node.parentId}-${nodeId}`,
+              source: node.parentId,
+              target: nodeId,
+              type: 'smoothstep',
+              style: { stroke: '#9CA3AF', strokeWidth: 2 },
+              animated: false,
+              markerEnd: {
+                type: 'arrow',
+                color: '#9CA3AF',
+              },
+            });
+          }
         }
       });
     }
