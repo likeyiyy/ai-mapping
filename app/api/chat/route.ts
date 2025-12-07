@@ -32,8 +32,6 @@ export async function POST(req: Request) {
   console.log(`Messages:`, messages);
   console.log(`Timestamp: ${new Date().toISOString()}`);
 
-  let fullResponse = '';
-
   const result = await streamText({
     model: openrouter(model) as any,
     messages,
@@ -44,13 +42,6 @@ export async function POST(req: Request) {
       console.log('Response:', result.text);
       console.log('Token usage:', result.usage);
       console.log('==================================\n');
-    },
-    onChunk: (chunk) => {
-      // Print chunks as they come in
-      if (chunk.text) {
-        fullResponse += chunk.text;
-        process.stdout.write(chunk.text);
-      }
     },
   });
 
