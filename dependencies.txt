@@ -1,0 +1,39 @@
+# 核心依赖
+@vercel/ai-sdk
+ai
+
+# 思维导图可视化
+@xyflow/react
+
+# Markdown渲染
+react-markdown
+remark-gfm
+rehype-highlight
+rehype-raw
+
+# 状态管理
+zustand
+
+# UI组件
+lucide-react
+@radix-ui/react-dialog
+@radix-ui/react-dropdown-menu
+@radix-ui/react-select
+@radix-ui/react-toast
+@radix-ui/react-tooltip
+class-variance-authority
+clsx
+tailwind-merge
+
+# 样式
+tailwindcss
+
+# OpenRouter API
+openai
+
+# 工具库
+uuid
+date-fns
+
+# 开发依赖
+@types/uuid
