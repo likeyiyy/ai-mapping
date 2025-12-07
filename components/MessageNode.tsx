@@ -33,6 +33,17 @@ export default function MessageNode({ id, data, selected }: MessageNodeProps) {
     }
   };
 
+  // Handle node click to set as active
+  const handleNodeClick = (e: React.MouseEvent) => {
+    // Prevent propagation when clicking on buttons
+    if ((e.target as HTMLElement).tagName === 'BUTTON' || (e.target as HTMLElement).closest('button')) {
+      return;
+    }
+    if (data.onNodeClick) {
+      data.onNodeClick(id);
+    }
+  };
+
   // Handle editing state
   if (data.isNew) {
     return (
@@ -115,12 +126,13 @@ export default function MessageNode({ id, data, selected }: MessageNodeProps) {
         style={{ background: '#9CA3AF', width: 10, height: 10 }}
       />
       <div
-        className={`relative px-4 py-3 bg-white rounded-lg border-2 shadow-lg min-w-[350px] max-w-[450px] transition-all hover:shadow-xl ${
+        className={`relative px-4 py-3 bg-white rounded-lg border-2 shadow-lg min-w-[350px] max-w-[450px] transition-all hover:shadow-xl cursor-pointer ${
           selected
             ? 'border-indigo-600 shadow-indigo-100 bg-indigo-50/30'
             : 'border-blue-500 hover:border-blue-600'
         }`}
         style={{ minWidth: '350px' }}
+        onClick={handleNodeClick}
       >
         <Handle
           type="target"

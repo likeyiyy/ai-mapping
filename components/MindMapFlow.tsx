@@ -129,6 +129,7 @@ function MindMapFlowContent({
                 aiResponse: aiNode?.content || null,
                 model: aiNode?.model || null, // 添加模型信息
                 onToggleDrawer: toggleDrawer,
+                onNodeClick: handleNodeClick,
                 isDrawerOpen: drawerOpenNodeId === nodeId,
                 selectedModel: selectedModel,
                 editingModel: editingModel,
@@ -358,6 +359,7 @@ function MindMapFlowContent({
                     content: '',
                     isNew: true,
                     onToggleDrawer: toggleDrawer,
+                    onNodeClick: handleNodeClick,
                     selectedModel: selectedModel,
                     editingModel: editingModel || selectedModel,
                     onModelChange: setEditingModel,
