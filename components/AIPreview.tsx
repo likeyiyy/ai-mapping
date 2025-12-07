@@ -51,7 +51,10 @@ export default function AIPreview({ content, isVisible, style }: AIPreviewProps)
         overflowY: 'auto',
       }}
     >
-      <div className="sticky top-0 bg-white border-b border-gray-200 p-4 z-10">
+      <div
+        className="sticky top-0 bg-white border-b border-gray-200 p-4 z-10 cursor-pointer hover:bg-gray-50"
+        onClick={() => setIsCollapsed(!isCollapsed)}
+      >
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Bot className="w-4 h-4 text-emerald-600 mt-0.5 flex-shrink-0" />
@@ -60,19 +63,16 @@ export default function AIPreview({ content, isVisible, style }: AIPreviewProps)
           <div className="flex items-center gap-2">
             <button
               id="copy-button"
-              onClick={handleCopy}
+              onClick={(e) => {
+                e.stopPropagation();
+                handleCopy();
+              }}
               className="p-1 text-gray-500 hover:text-gray-700 transition-colors"
               title="复制原始Markdown"
             >
               <Copy className="w-4 h-4" />
             </button>
-            <button
-              onClick={() => setIsCollapsed(!isCollapsed)}
-              className="p-1 text-gray-500 hover:text-gray-700 transition-colors"
-              title={isCollapsed ? "展开" : "折叠"}
-            >
-              {isCollapsed ? <ChevronDown className="w-4 h-4" /> : <ChevronUp className="w-4 h-4" />}
-            </button>
+            {isCollapsed ? <ChevronDown className="w-4 h-4 text-gray-500" /> : <ChevronUp className="w-4 h-4 text-gray-500" />}
           </div>
         </div>
       </div>

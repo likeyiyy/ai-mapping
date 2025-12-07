@@ -49,13 +49,14 @@ export default function MindMapInteractive({
     currentY: 0
   });
 
-  // 初始化节点位置
+  // 初始化节点位置和自动展开根节点的AI回复
   useEffect(() => {
     const horizontalSpacing = 250;
     const verticalSpacing = 100;
     const nodeWidth = 200;
     const nodeHeight = 80;
     const positions = new Map<string, NodePosition>();
+    const initialExpanded = new Set<string>();
 
     const positionNode = (nodeId: string, x: number, y: number, level: number = 0): number => {
       const node = conversationTree.nodes.get(nodeId);
@@ -64,6 +65,11 @@ export default function MindMapInteractive({
       // 只显示用户节点（AI回复作为内容隐藏在节点内）
       if (node.type === 'user') {
         positions.set(nodeId, { x, y, width: nodeWidth, height: nodeHeight });
+
+        // 如果是根节点且有AI回复，自动展开
+        if (nodeId === conversationTree.rootNode && node.children.length > 0) {
+          initialExpanded.add(nodeId);
+        }
 
         // 计算子节点位置（只计算用户节点的子节点）
         let currentY = y;
@@ -85,6 +91,7 @@ export default function MindMapInteractive({
 
     positionNode(conversationTree.rootNode, 100, 300);
     setNodePositions(positions);
+    setExpandedNodes(initialExpanded);
   }, [conversationTree]);
 
   const toggleNodeExpand = useCallback((nodeId: string) => {
