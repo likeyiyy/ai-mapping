@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Send, Sparkles, GitBranch, MessageSquare, Brain, Zap } from 'lucide-react';
-import { AI_MODELS } from '@/lib/constants';
+import { AI_MODELS, DEFAULT_AI_MODEL } from '@/lib/constants';
 
 interface ExamplePrompt {
   icon: React.ReactNode;
@@ -18,7 +18,7 @@ interface HomePageProps {
 
 export default function HomePage({ onStartChat }: HomePageProps) {
   const [input, setInput] = useState('');
-  const [selectedModel, setSelectedModel] = useState(AI_MODELS[0]?.id || 'google/gemini-2.0-flash-001');
+  const [selectedModel, setSelectedModel] = useState(DEFAULT_AI_MODEL);
 
   const examplePrompts: ExamplePrompt[] = [
     {

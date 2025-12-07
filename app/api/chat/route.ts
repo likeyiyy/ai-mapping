@@ -1,6 +1,7 @@
 import { openai } from '@ai-sdk/openai';
 import { streamText } from 'ai';
 import { createOpenAI } from '@ai-sdk/openai';
+import { DEFAULT_AI_MODEL } from './constants';
 
 // 配置OpenRouter
 const openrouter = createOpenAI({
@@ -23,7 +24,7 @@ const MODELS = {
 };
 
 export async function POST(req: Request) {
-  const { messages, model = 'google/gemini-2.0-flash-001' } = await req.json();
+  const { messages, model = DEFAULT_AI_MODEL } = await req.json();
 
   const result = await streamText({
     model: openrouter(model) as any,

@@ -2,7 +2,7 @@
 
 import { useState, useCallback } from 'react';
 import { ConversationNode, ConversationTree } from '@/lib/types';
-import { AI_MODELS } from '@/lib/constants';
+import { AI_MODELS, DEFAULT_AI_MODEL } from '@/lib/constants';
 import ChatInput from '@/components/ChatInput';
 import HomePage from '@/components/HomePage';
 import MindMapInteractive from '@/components/MindMapInteractive';
@@ -72,7 +72,7 @@ async function callChatAPI(
 export default function Home() {
   const [conversationTree, setConversationTree] = useState<ConversationTree | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [selectedModel, setSelectedModel] = useState(AI_MODELS[0]?.id || 'google/gemini-2.0-flash-001');
+  const [selectedModel, setSelectedModel] = useState(DEFAULT_AI_MODEL);
 
   // Create a new conversation
   const startConversation = useCallback(async (message: string, model: string) => {

@@ -1,5 +1,8 @@
 import { AIModel } from './types';
 
+// 默认AI模型
+export const DEFAULT_AI_MODEL = 'google/gemini-2.0-flash-001';
+
 // 可用的AI模型列表
 export const AI_MODELS: AIModel[] = [
   {
