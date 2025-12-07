@@ -51,10 +51,16 @@ export default function MindMapInteractive({
 
   // 初始化节点位置和自动展开根节点的AI回复
   useEffect(() => {
-    const horizontalSpacing = 250;
+    const horizontalSpacing = 300;
     const verticalSpacing = 100;
-    const nodeWidth = 200;
+    const nodeWidth = 280;
     const nodeHeight = 80;
+
+    // 检查是否有需要展开的长文本
+    const checkNodeNeedsExpansion = (nodeId: string): boolean => {
+      const node = conversationTree.nodes.get(nodeId);
+      return node ? node.content.length > 30 : false;
+    };
     const positions = new Map<string, NodePosition>();
     const initialExpanded = new Set<string>();
 
@@ -64,7 +70,13 @@ export default function MindMapInteractive({
 
       // 只显示用户节点（AI回复作为内容隐藏在节点内）
       if (node.type === 'user') {
-        positions.set(nodeId, { x, y, width: nodeWidth, height: nodeHeight });
+        // 根据内容动态调整高度
+        const contentLines = Math.ceil(node.content.length / 30);
+        const hasAINode = node.children.length > 0;
+        const baseHeight = hasAINode ? 130 : 80;
+        const dynamicHeight = Math.max(baseHeight, 40 + contentLines * 20);
+
+        positions.set(nodeId, { x, y, width: nodeWidth, height: dynamicHeight });
 
         // 如果是根节点且有AI回复，自动展开
         if (nodeId === conversationTree.rootNode && node.children.length > 0) {
@@ -303,6 +315,18 @@ export default function MindMapInteractive({
             const hasAINode = node.children.length > 0;
             const aiResponse = getAIResponse(nodeId);
 
+            // 获取AI模型信息
+            const aiNode = conversationTree.nodes.get(node.children[0]);
+            const aiModel = aiNode?.model || '';
+
+            // 判断文本是否需要截断
+            const textLength = node.content.length;
+            const needsTruncation = textLength > 30;
+            const displayText = needsTruncation && !isExpanded ? node.content.slice(0, 30) + '...' : node.content;
+
+            // 使用存储的高度，但确保最小高度
+            const dynamicHeight = Math.max(pos.height, 80);
+
             return (
               <g key={nodeId}>
                 {/* 节点背景 */}
@@ -310,7 +334,7 @@ export default function MindMapInteractive({
                   x={pos.x}
                   y={pos.y}
                   width={pos.width}
-                  height={pos.height}
+                  height={dynamicHeight}
                   rx="8"
                   fill="#EFF6FF"
                   stroke="#3B82F6"
@@ -326,30 +350,53 @@ export default function MindMapInteractive({
                   x={pos.x + 10}
                   y={pos.y + 10}
                   width={pos.width - 20}
-                  height={pos.height - 20}
+                  height={dynamicHeight - 20}
                 >
                   <div className="h-full flex flex-col">
-                    <div className="flex items-start gap-2 flex-1">
+                    {/* 上部分：用户文本内容 */}
+                    <div
+                      className="flex items-start gap-2 pb-2 cursor-pointer"
+                      onClick={() => needsTruncation && toggleNodeExpand(nodeId)}
+                    >
                       <User className="w-4 h-4 text-blue-600 mt-0.5 flex-shrink-0" />
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm text-gray-800 font-medium line-clamp-2">
-                          {node.content}
+                        <p className="text-sm text-gray-800 font-medium">
+                          {displayText}
+                          {needsTruncation && (
+                            <span className="text-blue-600 ml-1">
+                              {isExpanded ? '收起' : '展开'}
+                            </span>
+                          )}
                         </p>
-                        {hasAINode && (
-                          <button
-                            onClick={() => toggleNodeExpand(nodeId)}
-                            className="mt-2 flex items-center gap-1 text-xs text-blue-600 hover:text-blue-800"
-                          >
-                            {isExpanded ? (
-                              <ChevronDown className="w-3 h-3" />
-                            ) : (
-                              <ChevronRight className="w-3 h-3" />
-                            )}
-                            {isExpanded ? '隐藏' : '查看'} AI回复
-                          </button>
-                        )}
                       </div>
                     </div>
+
+                    {/* 下部分：AI模型和按钮 */}
+                    {hasAINode && (
+                      <div className="flex items-center justify-between gap-2 mt-auto pt-2 border-t border-blue-100">
+                        <div className="flex items-center gap-2">
+                          {aiModel && (
+                            <span className="text-xs px-2 py-1 bg-gray-100 rounded text-gray-600 font-medium">
+                              {aiModel}
+                            </span>
+                          )}
+                        </div>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            toggleNodeExpand(nodeId);
+                          }}
+                          className="flex items-center gap-1 text-xs text-blue-600 hover:text-blue-800 transition-colors"
+                        >
+                          {isExpanded ? (
+                            <ChevronDown className="w-3 h-3" />
+                          ) : (
+                            <ChevronRight className="w-3 h-3" />
+                          )}
+                          {isExpanded ? '隐藏' : '查看'} AI回复
+                        </button>
+                      </div>
+                    )}
                   </div>
                 </foreignObject>
 
@@ -361,14 +408,14 @@ export default function MindMapInteractive({
                   >
                     <circle
                       cx={pos.x + pos.width - 15}
-                      cy={pos.y + pos.height - 15}
+                      cy={pos.y + dynamicHeight - 15}
                       r="12"
                       fill="#3B82F6"
                       className="hover:opacity-80 transition-opacity"
                     />
                     <MessageCirclePlus
                       x={pos.x + pos.width - 21}
-                      y={pos.y + pos.height - 21}
+                      y={pos.y + dynamicHeight - 21}
                       width={12}
                       height={12}
                       color="white"
@@ -446,13 +493,16 @@ export default function MindMapInteractive({
 
         if (!isExpanded || !aiResponse) return null;
 
+        // 使用存储的高度
+        const dynamicHeight = pos.height;
+
         return (
           <div
             key={`ai-preview-${nodeId}`}
             className="absolute z-50"
             style={{
               left: `${pos.x}px`,
-              top: `${pos.y + pos.height + 10}px`,
+              top: `${pos.y + dynamicHeight + 10}px`,
             }}
           >
             <AIPreview
