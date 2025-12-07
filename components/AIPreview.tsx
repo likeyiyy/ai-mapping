@@ -17,6 +17,7 @@ export default function AIPreview({ content, isVisible, style }: AIPreviewProps)
   const processedContent = useMemo(() => {
     if (!content) return '';
 
+  
     // 确保代码块有正确的语言标识
     let processed = content;
 
@@ -51,7 +52,7 @@ export default function AIPreview({ content, isVisible, style }: AIPreviewProps)
 
       <div className="p-4 markdown-preview" style={{ minHeight: '100px' }}>
         <MarkdownPreview
-          value={processedContent}
+          source={processedContent}
           style={{
             backgroundColor: 'transparent',
             fontFamily: 'system-ui, -apple-system, sans-serif',

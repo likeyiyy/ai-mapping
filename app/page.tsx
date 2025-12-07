@@ -8,14 +8,18 @@ import HomePage from '@/components/HomePage';
 import MindMapInteractive from '@/components/MindMapInteractive';
 import { generateId } from 'ai';
 import { GitBranch, ArrowLeft } from 'lucide-react';
-// Function to call our API route
-async function callChatAPI(message: string, model: string): Promise<string> {
+// Function to call our API route with streaming support
+async function callChatAPI(
+  message: string,
+  model: string,
+  onChunk?: (chunk: string) => void
+): Promise<string> {
   const response = await fetch('/api/chat/completion', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({ message, model }),
+    body: JSON.stringify({ message, model, stream: !!onChunk }),
   });
 
   if (!response.ok) {
@@ -23,8 +27,46 @@ async function callChatAPI(message: string, model: string): Promise<string> {
     throw new Error(`API error: ${response.status} - ${error.error || 'Unknown error'}`);
   }
 
-  const data = await response.json();
-  return data.response;
+  if (onChunk) {
+    // Handle streaming response
+    const reader = response.body?.getReader();
+    const decoder = new TextDecoder();
+    let fullResponse = '';
+
+    if (reader) {
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        const chunk = decoder.decode(value, { stream: true });
+        const lines = chunk.split('\n');
+
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            const data = line.slice(6);
+            if (data === '[DONE]') continue;
+
+            try {
+              const parsed = JSON.parse(data);
+              const content = parsed.choices?.[0]?.delta?.content || '';
+              if (content) {
+                fullResponse += content;
+                onChunk(content);
+              }
+            } catch (e) {
+              // Ignore parsing errors
+            }
+          }
+        }
+      }
+    }
+
+    return fullResponse;
+  } else {
+    // Non-streaming response
+    const data = await response.json();
+    return data.response;
+  }
 }
 
 export default function Home() {
@@ -53,13 +95,11 @@ export default function Home() {
     };
 
     try {
-      // Call OpenRouter API
-      const aiResponse = await callChatAPI(message, model);
-
+      // Create AI node with empty content initially
       const aiNode: ConversationNode = {
         id: aiId,
         type: 'assistant',
-        content: aiResponse,
+        content: '',
         model: modelDisplayName,
         parentId: userId,
         children: [],
@@ -82,7 +122,45 @@ export default function Home() {
         updatedAt: new Date(),
       };
 
+      // Show the tree immediately with empty AI response
       setConversationTree(newTree);
+
+      // Call OpenRouter API with streaming
+      const aiResponse = await callChatAPI(message, model, (chunk) => {
+        // Update the AI node content as chunks arrive
+        setConversationTree(prev => {
+          if (!prev) return prev;
+          const updatedNodes = new Map(prev.nodes);
+          const currentAINode = updatedNodes.get(aiId);
+          if (currentAINode) {
+            updatedNodes.set(aiId, {
+              ...currentAINode,
+              content: currentAINode.content + chunk
+            });
+          }
+          return {
+            ...prev,
+            nodes: updatedNodes
+          };
+        });
+      });
+
+      // Final update to ensure full content is set
+      setConversationTree(prev => {
+        if (!prev) return prev;
+        const updatedNodes = new Map(prev.nodes);
+        const currentAINode = updatedNodes.get(aiId);
+        if (currentAINode) {
+          updatedNodes.set(aiId, {
+            ...currentAINode,
+            content: aiResponse
+          });
+        }
+        return {
+          ...prev,
+          nodes: updatedNodes
+        };
+      });
     } catch (error) {
       console.error('Error calling OpenRouter API:', error);
       // You might want to show an error message to the user here
@@ -116,12 +194,12 @@ export default function Home() {
     try {
       // Get AI response
       const aiId = generateId();
-      const aiResponse = await callChatAPI(message, model);
 
+      // Create AI node with empty content initially
       const aiNode: ConversationNode = {
         id: aiId,
         type: 'assistant',
-        content: aiResponse,
+        content: '',
         model: modelDisplayName,
         parentId: childId,
         children: [],
@@ -144,10 +222,48 @@ export default function Home() {
         updatedNodes.set(parentNode, parentNode);
       }
 
+      // Show the tree immediately with empty AI response
       setConversationTree({
         ...conversationTree,
         nodes: updatedNodes,
         updatedAt: new Date(),
+      });
+
+      // Call OpenRouter API with streaming
+      const aiResponse = await callChatAPI(message, model, (chunk) => {
+        // Update the AI node content as chunks arrive
+        setConversationTree(prev => {
+          if (!prev) return prev;
+          const newNodes = new Map(prev.nodes);
+          const currentAINode = newNodes.get(aiId);
+          if (currentAINode) {
+            newNodes.set(aiId, {
+              ...currentAINode,
+              content: currentAINode.content + chunk
+            });
+          }
+          return {
+            ...prev,
+            nodes: newNodes
+          };
+        });
+      });
+
+      // Final update to ensure full content is set
+      setConversationTree(prev => {
+        if (!prev) return prev;
+        const newNodes = new Map(prev.nodes);
+        const currentAINode = newNodes.get(aiId);
+        if (currentAINode) {
+          newNodes.set(aiId, {
+            ...currentAINode,
+            content: aiResponse
+          });
+        }
+        return {
+          ...prev,
+          nodes: newNodes
+        };
       });
     } catch (error) {
       console.error('Error calling OpenRouter API:', error);

@@ -20,7 +20,7 @@ export async function callOpenRouterAPI(
   messages: OpenRouterMessage[],
   model: string,
   stream: boolean = false
-): Promise<string> {
+): Promise<string | ReadableStream> {
   const apiKey = process.env.OPENROUTER_API_KEY;
 
   if (!apiKey) {
@@ -35,27 +35,44 @@ export async function callOpenRouterAPI(
     stream: stream,
   };
 
-  const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${apiKey}`,
-      'Content-Type': 'application/json',
-      'HTTP-Referer': process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000',
-      'X-Title': 'AI Mind Map',
-    },
-    body: JSON.stringify(requestBody),
-  });
-
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({ error: 'Unknown error' }));
-    throw new Error(`OpenRouter API error: ${response.status} - ${error.error?.message || error.error}`);
-  }
-
   if (stream) {
-    // For streaming, we would need to handle Server-Sent Events
-    // For now, we'll return a placeholder
-    return 'Streaming response...';
+    // Handle streaming response
+    const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json; charset=utf-8',
+        'HTTP-Referer': process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000',
+        'X-Title': 'AI Mind Map',
+      },
+      body: JSON.stringify(requestBody),
+    });
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ error: 'Unknown error' }));
+      throw new Error(`OpenRouter API error: ${response.status} - ${error.error?.message || error.error}`);
+    }
+
+    // Return the response body as a stream
+    return response.body!;
   } else {
+    // Non-streaming response
+    const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json; charset=utf-8',
+        'HTTP-Referer': process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000',
+        'X-Title': 'AI Mind Map',
+      },
+      body: JSON.stringify(requestBody),
+    });
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ error: 'Unknown error' }));
+      throw new Error(`OpenRouter API error: ${response.status} - ${error.error?.message || error.error}`);
+    }
+
     const data: OpenRouterResponse = await response.json();
     return data.choices[0]?.message?.content || 'No response received';
   }

@@ -346,18 +346,6 @@ export default function MindMapInteractive({
                   </div>
                 </foreignObject>
 
-                {/* AI回复展开内容 */}
-                {isExpanded && aiResponse && (
-                  <AIPreview
-                    content={aiResponse}
-                    isVisible={true}
-                    style={{
-                      left: `${pos.x}px`,
-                      top: `${pos.y + pos.height + 10}px`,
-                    }}
-                  />
-                )}
-
                 {/* 添加按钮 */}
                 {isHovered && (
                   <g
@@ -440,6 +428,34 @@ export default function MindMapInteractive({
           })}
         </g>
       </svg>
+
+      {/* AI回复预览 - 渲染在SVG外部 */}
+      {Array.from(nodePositions.entries()).map(([nodeId, pos]) => {
+        const node = conversationTree.nodes.get(nodeId);
+        if (!node || node.type !== 'user') return null;
+
+        const isExpanded = expandedNodes.has(nodeId);
+        const aiResponse = getAIResponse(nodeId);
+
+        if (!isExpanded || !aiResponse) return null;
+
+        return (
+          <div
+            key={`ai-preview-${nodeId}`}
+            className="absolute z-50"
+            style={{
+              left: `${pos.x}px`,
+              top: `${pos.y + pos.height + 10}px`,
+            }}
+          >
+            <AIPreview
+              content={aiResponse}
+              isVisible={true}
+              style={{}}
+            />
+          </div>
+        );
+      })}
     </div>
   );
 }
