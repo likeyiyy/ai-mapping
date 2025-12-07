@@ -72,7 +72,7 @@ async function callChatAPI(
 export default function Home() {
   const [conversationTree, setConversationTree] = useState<ConversationTree | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [selectedModel, setSelectedModel] = useState('google/gemini-2.0-flash-001');
+  const [selectedModel, setSelectedModel] = useState(AI_MODELS[0]?.id || 'google/gemini-2.0-flash-001');
 
   // Create a new conversation
   const startConversation = useCallback(async (message: string, model: string) => {
