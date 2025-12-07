@@ -3,8 +3,7 @@
 import { useCallback, useState, useMemo, useRef, useEffect } from 'react';
 import { ConversationTree, ConversationNode } from '@/lib/types';
 import { Bot, User, MessageCirclePlus, ChevronDown, ChevronRight } from 'lucide-react';
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
+import AIPreview from './AIPreview';
 
 interface MindMapInteractiveProps {
   conversationTree: ConversationTree;
@@ -349,24 +348,14 @@ export default function MindMapInteractive({
 
                 {/* AI回复展开内容 */}
                 {isExpanded && aiResponse && (
-                  <foreignObject
-                    x={pos.x}
-                    y={pos.y + pos.height + 10}
-                    width={pos.width + 400}
-                    height={400}
-                  >
-                    <div className="bg-white rounded-lg shadow-lg border border-gray-200 p-4 max-h-96 overflow-y-auto w-full min-w-[400px]">
-                      <div className="flex items-start gap-2 mb-2">
-                        <Bot className="w-4 h-4 text-emerald-600 mt-0.5 flex-shrink-0" />
-                        <span className="text-xs font-medium text-emerald-600">AI 回复</span>
-                      </div>
-                      <div className="prose prose-sm max-w-none text-gray-800">
-                        <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                          {aiResponse}
-                        </ReactMarkdown>
-                      </div>
-                    </div>
-                  </foreignObject>
+                  <AIPreview
+                    content={aiResponse}
+                    isVisible={true}
+                    style={{
+                      left: `${pos.x}px`,
+                      top: `${pos.y + pos.height + 10}px`,
+                    }}
+                  />
                 )}
 
                 {/* 添加按钮 */}

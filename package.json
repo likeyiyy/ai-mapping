@@ -20,6 +20,8 @@
     "@reactflow/core": "^11.11.4",
     "@reactflow/minimap": "^11.7.14",
     "@reactflow/node-resizer": "^2.2.14",
+    "@uiw/react-markdown-preview": "^5.1.5",
+    "@uiw/react-md-editor": "^4.0.11",
     "ai": "^3.4.0",
     "autoprefixer": "^10.4.22",
     "class-variance-authority": "^0.7.0",
