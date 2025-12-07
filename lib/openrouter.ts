@@ -20,7 +20,7 @@ export async function callOpenRouterAPI(
   messages: OpenRouterMessage[],
   model: string,
   stream: boolean = false
-): Promise<string | ReadableStream> {
+): Promise<string | ReadableStream<Uint8Array>> {
   const apiKey = process.env.OPENROUTER_API_KEY;
 
   if (!apiKey) {

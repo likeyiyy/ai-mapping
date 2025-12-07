@@ -219,7 +219,7 @@ export default function Home() {
       const parentNode = updatedNodes.get(parentId);
       if (parentNode) {
         parentNode.children.push(childId);
-        updatedNodes.set(parentNode, parentNode);
+        updatedNodes.set(parentId, parentNode);
       }
 
       // Show the tree immediately with empty AI response

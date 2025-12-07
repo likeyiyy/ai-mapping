@@ -17,10 +17,20 @@ export async function POST(request: NextRequest) {
 
     if (stream) {
       // Streaming response
-      const stream = await callOpenRouterAPI(messages, model, true);
+      const response = await callOpenRouterAPI(messages, model, true);
+
+      if (typeof response === 'string') {
+        // Shouldn't happen with stream=true, but handle it
+        return new Response(
+          JSON.stringify({ response }),
+          {
+            headers: { 'Content-Type': 'application/json' }
+          }
+        );
+      }
 
       // Convert the stream to Server-Sent Events format
-      const reader = stream.getReader();
+      const reader = response.getReader();
       const encoder = new TextEncoder();
 
       const readable = new ReadableStream({

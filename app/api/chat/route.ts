@@ -24,8 +24,8 @@ const MODELS = {
 export async function POST(req: Request) {
   const { messages, model = 'google/gemini-2.5-pro' } = await req.json();
 
-  const result = streamText({
-    model: openrouter(model),
+  const result = await streamText({
+    model: openrouter(model) as any,
     messages,
     temperature: 0.7,
     maxTokens: 2000,
