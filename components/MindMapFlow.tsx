@@ -10,6 +10,8 @@ import ReactFlow, {
   Panel,
   Handle,
   Position,
+  useReactFlow,
+  ReactFlowProvider,
 } from 'reactflow';
 import { Controls } from '@reactflow/controls';
 import { Background } from '@reactflow/background';
@@ -22,13 +24,22 @@ import { AI_MODELS, DEFAULT_AI_MODEL } from '@/lib/constants';
 // Custom Node Component
 const MessageNode = ({ id, data, selected }: { id: string; data: any; selected?: boolean }) => {
   const [isExpanded, setIsExpanded] = useState(false);
-  const [previewVisible, setPreviewVisible] = useState(false);
   const [editText, setEditText] = useState(data.content || '');
+  const [previewVisible, setPreviewVisible] = useState(false);
 
   // Update edit text when data.content changes
   useEffect(() => {
     setEditText(data.content || '');
   }, [data.content]);
+
+  // Toggle preview
+  const handleTogglePreview = () => {
+    const newState = !previewVisible;
+    setPreviewVisible(newState);
+    if (data.onTogglePreview) {
+      data.onTogglePreview(id);
+    }
+  };
 
   // Handle editing state
   if (data.isNew) {
@@ -40,8 +51,8 @@ const MessageNode = ({ id, data, selected }: { id: string; data: any; selected?:
           style={{ background: '#9CA3AF', width: 10, height: 10 }}
         />
         <div
-          className={`px-4 py-3 bg-white rounded-lg border-2 ${selected ? 'border-blue-600' : 'border-blue-500'} shadow-lg min-w-[300px] max-w-[400px] animate-pulse`}
-          style={{ minWidth: '300px' }}
+          className={`px-4 py-3 bg-white rounded-lg border-2 ${selected ? 'border-blue-600' : 'border-blue-500'} shadow-lg min-w-[350px] max-w-[450px] animate-pulse`}
+          style={{ minWidth: '350px' }}
         >
           <div className="flex items-center gap-2 mb-2">
             <User className="w-4 h-4 text-blue-600" />
@@ -57,7 +68,7 @@ const MessageNode = ({ id, data, selected }: { id: string; data: any; selected?:
               window.dispatchEvent(event);
             }}
             placeholder="输入问题..."
-            className="w-full text-sm text-gray-800 bg-transparent outline-none"
+            className="w-full text-sm text-gray-800 bg-transparent outline-none mb-2"
             autoFocus
             onKeyDown={(e) => {
               e.stopPropagation();
@@ -73,6 +84,23 @@ const MessageNode = ({ id, data, selected }: { id: string; data: any; selected?:
               }
             }}
           />
+          {/* Model selector for new question */}
+          <select
+            value={data.editingModel || data.selectedModel}
+            onChange={(e) => {
+              const newModel = e.target.value;
+              if (data.onModelChange) {
+                data.onModelChange(newModel);
+              }
+            }}
+            className="w-full px-2 py-1 text-sm border border-gray-300 rounded bg-white text-gray-700"
+          >
+            {AI_MODELS.map(model => (
+              <option key={model.id} value={model.id}>
+                {model.name}
+              </option>
+            ))}
+          </select>
         </div>
         <Handle
           type="source"
@@ -91,56 +119,77 @@ const MessageNode = ({ id, data, selected }: { id: string; data: any; selected?:
         style={{ background: '#9CA3AF', width: 10, height: 10 }}
       />
       <div
-        className={`px-4 py-3 bg-white rounded-lg border-2 shadow-lg min-w-[300px] max-w-[400px] transition-all hover:shadow-xl ${
+        className={`relative px-4 py-3 bg-white rounded-lg border-2 shadow-lg min-w-[350px] max-w-[450px] transition-all hover:shadow-xl ${
           selected ? 'border-blue-600' : 'border-blue-500'
         }`}
-        style={{ minWidth: '300px' }}
+        style={{ minWidth: '350px' }}
       >
+        <Handle
+          type="target"
+          position={Position.Left}
+          style={{ background: '#9CA3AF', width: 10, height: 10 }}
+        />
         {/* Header */}
-        <div className="flex items-center justify-between mb-2 pb-2 border-b border-gray-200">
-          <div className="flex items-center gap-2">
-            {data.type === 'user' ? (
-              <User className="w-4 h-4 text-blue-600" />
-            ) : (
-              <Bot className="w-4 h-4 text-emerald-600" />
-            )}
-            <span className="text-sm font-medium text-gray-700">
-              {data.type === 'user' ? '用户' : data.model || 'AI'}
-            </span>
-          </div>
-          {data.type === 'user' && data.hasAIResponse && (
-            <button
-              onClick={() => setPreviewVisible(!previewVisible)}
-              className="text-xs text-blue-600 hover:text-blue-800"
-            >
-              {previewVisible ? '隐藏' : '查看'}回复
-            </button>
+        <div className="flex items-center gap-2 mb-2 pb-2 border-b border-gray-200">
+          {data.type === 'user' ? (
+            <User className="w-4 h-4 text-blue-600" />
+          ) : (
+            <Bot className="w-4 h-4 text-emerald-600" />
           )}
+          <span className="text-sm font-medium text-gray-700">
+            {data.type === 'user' ? '用户' : data.model || 'AI'}
+          </span>
         </div>
 
         {/* Content */}
-        <div className="text-sm text-gray-800">
+        <div className="text-sm text-gray-800 min-h-[20px]">
           {data.content || (
             <span className="text-gray-400 italic">加载中...</span>
           )}
         </div>
 
-        {/* AI Preview */}
+        {/* Bottom section with model and button */}
+        {data.type === 'user' && data.hasAIResponse && (
+          <div className="flex items-center justify-between mt-auto pt-2 border-t border-blue-100">
+            {data.model && (
+              <span className="text-xs px-2 py-1 bg-gray-100 rounded text-gray-600 font-medium">
+                {data.model}
+              </span>
+            )}
+            <button
+              onClick={handleTogglePreview}
+              className="flex items-center gap-1 text-xs text-blue-600 hover:text-blue-800 transition-colors"
+            >
+              {previewVisible ? (
+                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              ) : (
+                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
+              )}
+              {previewVisible ? '隐藏' : '查看'}回复
+            </button>
+          </div>
+        )}
+
+        {/* AI Preview - positioned absolutely like SVG version */}
         {data.type === 'user' && data.aiResponse && previewVisible && (
-          <div className="mt-3 pt-3 border-t border-gray-200">
+          <div className="absolute z-50" style={{ top: '100%', left: 0, marginTop: '8px' }}>
             <AIPreview
               content={data.aiResponse}
               isVisible={true}
-              style={{ position: 'static', width: '100%' }}
+              style={{ width: '100%' }}
             />
           </div>
         )}
+        <Handle
+          type="source"
+          position={Position.Right}
+          style={{ background: '#9CA3AF', width: 10, height: 10 }}
+        />
       </div>
-      <Handle
-        type="source"
-        position={Position.Right}
-        style={{ background: '#9CA3AF', width: 10, height: 10 }}
-      />
     </div>
   );
 };
@@ -150,7 +199,8 @@ const nodeTypes = {
   message: MessageNode,
 };
 
-export default function MindMapFlow({
+// Inner component that can use ReactFlow hooks
+function MindMapFlowContent({
   conversationTree,
   onAddChild,
   selectedModel,
@@ -163,6 +213,21 @@ export default function MindMapFlow({
 }) {
   const [editingNodeId, setEditingNodeId] = useState<string | null>(null);
   const [editingText, setEditingText] = useState('');
+  const [editingModel, setEditingModel] = useState(selectedModel);
+  const [lastActiveNodeId, setLastActiveNodeId] = useState<string | null>(null);
+  const [previewStates, setPreviewStates] = useState<Record<string, boolean>>({});
+
+  // Get zoom level from ReactFlow instance
+  const { getZoom } = useReactFlow();
+  const [zoomLevel, setZoomLevel] = useState(100);
+
+  // Preview state management
+  const togglePreview = useCallback((nodeId: string) => {
+    setPreviewStates(prev => ({
+      ...prev,
+      [nodeId]: !prev[nodeId]
+    }));
+  }, []);
 
   // Convert conversation tree to React Flow nodes
   const initialNodes: Node[] = useMemo(() => {
@@ -198,10 +263,12 @@ export default function MindMapFlow({
         if (node.type === 'user') {
           const pos = positions.get(nodeId);
           if (pos) {
-            const aiNode = node.children.find(id => {
+            const aiNodeId = node.children.find(id => {
               const n = conversationTree.nodes.get(id);
               return n?.type === 'assistant';
             });
+
+            const aiNode = aiNodeId ? conversationTree.nodes.get(aiNodeId) : null;
 
             nodes.push({
               id: nodeId,
@@ -210,7 +277,12 @@ export default function MindMapFlow({
               data: {
                 ...node,
                 hasAIResponse: !!aiNode,
-                aiResponse: aiNode ? conversationTree.nodes.get(aiNode)?.content : null,
+                aiResponse: aiNode?.content || null,
+                model: aiNode?.model || null, // 添加模型信息
+                onTogglePreview: togglePreview,
+                selectedModel: selectedModel,
+                editingModel: editingModel,
+                onModelChange: setEditingModel,
               },
             });
           }
@@ -261,10 +333,24 @@ export default function MindMapFlow({
     setEdges(initialEdges);
   }, [initialNodes, initialEdges]);
 
+  // Update zoom level on viewport changes
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setZoomLevel(Math.round(getZoom() * 100));
+    }, 100);
+
+    return () => clearInterval(interval);
+  }, [getZoom]);
+
   const onConnect = useCallback(
     (params: any) => setEdges((eds) => addEdge(params, eds)),
     [setEdges]
   );
+
+  // Track last active node
+  const handleNodeClick = useCallback((nodeId: string) => {
+    setLastActiveNodeId(nodeId);
+  }, []);
 
   // Handle Tab key for creating new nodes
   useEffect(() => {
@@ -272,19 +358,27 @@ export default function MindMapFlow({
       if (e.key === 'Tab' && !editingNodeId) {
         e.preventDefault();
 
-        // Find the last user node
-        const userNodes = nodes.filter(node => {
-          const nodeData = conversationTree?.nodes.get(node.id);
-          return nodeData?.type === 'user';
-        });
+        // Use last active node if set, otherwise find the last user node
+        let parentNode: Node | undefined;
 
-        if (userNodes.length > 0) {
-          const lastNode = userNodes[userNodes.length - 1];
+        if (lastActiveNodeId) {
+          parentNode = nodes.find(n => n.id === lastActiveNodeId);
+        } else {
+          const userNodes = nodes.filter(node => {
+            const nodeData = conversationTree?.nodes.get(node.id);
+            return nodeData?.type === 'user';
+          });
+          if (userNodes.length > 0) {
+            parentNode = userNodes[userNodes.length - 1];
+          }
+        }
+
+        if (parentNode) {
           const newNodeId = `temp-${Date.now()}`;
 
           // Create new node position
-          const newX = lastNode.position.x + 500;
-          const newY = lastNode.position.y;
+          const newX = parentNode.position.x + 500;
+          const newY = parentNode.position.y;
 
           // Add new node
           const newNode: Node = {
@@ -295,13 +389,17 @@ export default function MindMapFlow({
               type: 'user',
               content: '',
               isNew: true,
+              onTogglePreview: togglePreview,
+              selectedModel: selectedModel,
+              editingModel: editingModel,
+              onModelChange: setEditingModel,
             },
           };
 
           // Create edge immediately when node is created
           const newEdge: Edge = {
-            id: `${lastNode.id}-${newNodeId}`,
-            source: lastNode.id,
+            id: `${parentNode.id}-${newNodeId}`,
+            source: parentNode.id,
             target: newNodeId,
             type: 'smoothstep',
             style: { stroke: '#9CA3AF', strokeWidth: 2 },
@@ -312,6 +410,7 @@ export default function MindMapFlow({
           setEdges(prev => [...prev, newEdge]);
           setEditingNodeId(newNodeId);
           setEditingText('');
+          setEditingModel(selectedModel);
         }
       }
 
@@ -327,7 +426,7 @@ export default function MindMapFlow({
 
           if (userNodes.length > 0) {
             const parentNode = userNodes[userNodes.length - 1];
-            onAddChild(parentNode.id, editingText.trim(), selectedModel);
+            onAddChild(parentNode.id, editingText.trim(), editingModel || selectedModel);
           }
         }
 
@@ -343,6 +442,7 @@ export default function MindMapFlow({
         setEdges(prev => prev.filter(e => e.target !== editingNodeId));
         setEditingNodeId(null);
         setEditingText('');
+        setEditingModel(null);
       }
 
       // Handle Escape key
@@ -390,8 +490,9 @@ export default function MindMapFlow({
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
         onConnect={onConnect}
+        onNodeClick={(event, node) => handleNodeClick(node.id)}
         nodeTypes={nodeTypes}
-        fitView
+        defaultViewport={{ x: 0, y: 0, zoom: 1 }}
       >
         <Background color="#e5e7eb" gap={20} />
         <Controls />
@@ -406,8 +507,37 @@ export default function MindMapFlow({
           <p className="text-sm text-gray-600">Tab - 添加新节点</p>
           <p className="text-sm text-gray-600">拖拽 - 移动节点</p>
           <p className="text-sm text-gray-600">滚轮 - 缩放</p>
+          <div className="mt-2 pt-2 border-t border-gray-200">
+            <p className="text-sm text-gray-600">
+              缩放: <span className="font-mono font-medium">{zoomLevel}%</span>
+            </p>
+          </div>
         </Panel>
       </ReactFlow>
     </div>
+  );
+}
+
+// Export wrapper component
+export default function MindMapFlow({
+  conversationTree,
+  onAddChild,
+  selectedModel,
+  isLoading,
+}: {
+  conversationTree: any;
+  onAddChild: (parentId: string, message: string, model: string) => Promise<void>;
+  selectedModel: string;
+  isLoading?: boolean;
+}) {
+  return (
+    <ReactFlowProvider>
+      <MindMapFlowContent
+        conversationTree={conversationTree}
+        onAddChild={onAddChild}
+        selectedModel={selectedModel}
+        isLoading={isLoading}
+      />
+    </ReactFlowProvider>
   );
 }

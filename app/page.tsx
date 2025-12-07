@@ -5,7 +5,6 @@ import { ConversationNode, ConversationTree } from '@/lib/types';
 import { AI_MODELS, DEFAULT_AI_MODEL } from '@/lib/constants';
 import ChatInput from '@/components/ChatInput';
 import HomePage from '@/components/HomePage';
-import MindMapInteractive from '@/components/MindMapInteractive';
 import MindMapFlow from '@/components/MindMapFlow';
 import { generateId } from 'ai';
 import { GitBranch } from 'lucide-react';
@@ -74,7 +73,6 @@ export default function Home() {
   const [conversationTree, setConversationTree] = useState<ConversationTree | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [selectedModel, setSelectedModel] = useState(DEFAULT_AI_MODEL);
-  const [useFlowView, setUseFlowView] = useState(false); // Toggle between views
 
   // Create a new conversation
   const startConversation = useCallback(async (message: string, model: string) => {
@@ -305,29 +303,6 @@ export default function Home() {
                 </div>
                 <h1 className="text-xl font-bold text-gray-900">AI 对话思维导图</h1>
               </button>
-              {/* Toggle between views */}
-              <div className="flex items-center gap-2 bg-gray-100 rounded-lg p-1">
-                <button
-                  onClick={() => setUseFlowView(false)}
-                  className={`px-3 py-1 rounded text-sm transition-colors ${
-                    !useFlowView
-                      ? 'bg-white text-gray-900 shadow-sm'
-                      : 'text-gray-600 hover:text-gray-900'
-                  }`}
-                >
-                  SVG
-                </button>
-                <button
-                  onClick={() => setUseFlowView(true)}
-                  className={`px-3 py-1 rounded text-sm transition-colors ${
-                    useFlowView
-                      ? 'bg-white text-gray-900 shadow-sm'
-                      : 'text-gray-600 hover:text-gray-900'
-                  }`}
-                >
-                  React Flow
-                </button>
-              </div>
             </div>
             <div className="text-sm text-gray-600">
               {conversationTree.title}
@@ -338,21 +313,12 @@ export default function Home() {
 
       {/* MindMap Container */}
       <div className="pt-16">
-        {useFlowView ? (
-          <MindMapFlow
-            conversationTree={conversationTree}
-            onAddChild={addChildNode}
-            selectedModel={selectedModel}
-            isLoading={isLoading}
-          />
-        ) : (
-          <MindMapInteractive
-            conversationTree={conversationTree}
-            onAddChild={addChildNode}
-            selectedModel={selectedModel}
-            isLoading={isLoading}
-          />
-        )}
+        <MindMapFlow
+          conversationTree={conversationTree}
+          onAddChild={addChildNode}
+          selectedModel={selectedModel}
+          isLoading={isLoading}
+        />
       </div>
     </div>
   );
