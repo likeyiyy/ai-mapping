@@ -26,11 +26,32 @@ const MODELS = {
 export async function POST(req: Request) {
   const { messages, model = DEFAULT_AI_MODEL } = await req.json();
 
+  // Log the incoming request
+  console.log(`\n=== Chat API Request (AI SDK) ===`);
+  console.log(`Model: ${model}`);
+  console.log(`Messages:`, messages);
+  console.log(`Timestamp: ${new Date().toISOString()}`);
+
+  let fullResponse = '';
+
   const result = await streamText({
     model: openrouter(model) as any,
     messages,
     temperature: 0.7,
     maxTokens: 2000,
+    onFinish: (result) => {
+      console.log(`\n=== Complete AI Response (AI SDK) ===`);
+      console.log('Response:', result.text);
+      console.log('Token usage:', result.usage);
+      console.log('==================================\n');
+    },
+    onChunk: (chunk) => {
+      // Print chunks as they come in
+      if (chunk.text) {
+        fullResponse += chunk.text;
+        process.stdout.write(chunk.text);
+      }
+    },
   });
 
   return result.toDataStreamResponse();
