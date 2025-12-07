@@ -355,12 +355,12 @@ export default function MindMapInteractive({
                     width={pos.width + 400}
                     height={400}
                   >
-                    <div className="bg-white rounded-lg shadow-lg border border-gray-200 p-4 max-h-96 overflow-y-auto w-full min-w-[400px] text-left">
+                    <div className="bg-white rounded-lg shadow-lg border border-gray-200 p-4 max-h-96 overflow-y-auto w-full min-w-[400px]">
                       <div className="flex items-start gap-2 mb-2">
                         <Bot className="w-4 h-4 text-emerald-600 mt-0.5 flex-shrink-0" />
                         <span className="text-xs font-medium text-emerald-600">AI 回复</span>
                       </div>
-                      <div className="prose prose-sm max-w-none text-gray-800 prose-headings:text-left prose-p:text-left prose-ul:text-left prose-ol:text-left prose-blockquote:text-left">
+                      <div className="prose prose-sm max-w-none text-gray-800">
                         <ReactMarkdown remarkPlugins={[remarkGfm]}>
                           {aiResponse}
                         </ReactMarkdown>
