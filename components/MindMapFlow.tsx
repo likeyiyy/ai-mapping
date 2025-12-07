@@ -348,9 +348,12 @@ function MindMapFlowContent({
               if (parentNode) {
                 const newNodeId = `temp-${Date.now()}`;
 
-                // Create new node position
+                // Count existing children of this parent node to calculate Y offset
+                const existingChildren = edges.filter(e => e.source === parentNode.id).length;
+
+                // Create new node position with Y offset based on number of existing children
                 const newX = parentNode.position.x + 500;
-                const newY = parentNode.position.y;
+                const newY = parentNode.position.y + (existingChildren * 150);
 
                 // Add new node
                 const newNode: Node = {
