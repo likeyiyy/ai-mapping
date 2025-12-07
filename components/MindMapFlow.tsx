@@ -78,6 +78,11 @@ function MindMapFlowContent({
     };
   }, [drawerOpenNodeId, conversationTree]);
 
+  // Track last active node
+  const handleNodeClick = useCallback((nodeId: string) => {
+    setLastActiveNodeId(nodeId);
+  }, []);
+
   // Convert conversation tree to React Flow nodes
   const initialNodes: Node[] = useMemo(() => {
     const nodes: Node[] = [];
@@ -197,11 +202,6 @@ function MindMapFlowContent({
     (params: any) => setEdges((eds) => addEdge(params, eds)),
     [setEdges]
   );
-
-  // Track last active node
-  const handleNodeClick = useCallback((nodeId: string) => {
-    setLastActiveNodeId(nodeId);
-  }, []);
 
   // Handle Escape key to close drawer
   useEffect(() => {
