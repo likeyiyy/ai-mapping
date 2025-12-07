@@ -225,15 +225,15 @@ function MindMapFlowContent({
         e.preventDefault();
         e.stopPropagation();
         if (editingText.trim()) {
-          // Find parent node (the last user node before this temp node)
-          const userNodes = nodes.filter(node => {
-            const nodeData = conversationTree?.nodes.get(node.id);
-            return nodeData?.type === 'user' && node.id !== editingNodeId;
-          });
-
-          if (userNodes.length > 0) {
-            const parentNode = userNodes[userNodes.length - 1];
-            onAddChild(parentNode.id, editingText.trim(), editingModel || selectedModel);
+          // Find the actual parent node of this temp node
+          const tempNode = nodes.find(n => n.id === editingNodeId);
+          if (tempNode) {
+            // Find the edge connected to this temp node
+            const connectedEdge = edges.find(e => e.target === editingNodeId);
+            if (connectedEdge) {
+              // The source of the edge is the parent node
+              onAddChild(connectedEdge.source, editingText.trim(), editingModel || selectedModel);
+            }
           }
         }
 
