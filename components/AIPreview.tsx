@@ -36,27 +36,8 @@ export default function AIPreview({ content, isVisible, style }: AIPreviewProps)
         </div>
       </div>
 
-      <div className="p-4 markdown-preview" style={{ minHeight: '100px' }}>
-        <ReactMarkdown
-          remarkPlugins={[remarkGfm]}
-          className="prose prose-sm max-w-none"
-          components={{
-            code: ({ node, inline, className, children, ...props }) => {
-              const match = /language-(\w+)/.exec(className || '');
-              return !inline && match ? (
-                <pre className="bg-gray-100 p-3 rounded-lg overflow-x-auto">
-                  <code className={className} {...props}>
-                    {children}
-                  </code>
-                </pre>
-              ) : (
-                <code className="bg-gray-100 px-1 py-0.5 rounded text-sm" {...props}>
-                  {children}
-                </code>
-              );
-            },
-          }}
-        >
+      <div className="p-4 markdown-preview prose prose-sm max-w-none" style={{ minHeight: '100px' }}>
+        <ReactMarkdown remarkPlugins={[remarkGfm]}>
           {processedContent}
         </ReactMarkdown>
       </div>
