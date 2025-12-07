@@ -181,7 +181,7 @@ function MindMapFlowContent({
   useEffect(() => {
     setNodes(initialNodes);
     setEdges(initialEdges);
-  }, [conversationTree?.id]); // Only update when conversation changes
+  }, [conversationTree, initialNodes, initialEdges]); // Update when conversation tree or its derived values change
 
   // Update zoom level on viewport changes
   useEffect(() => {
