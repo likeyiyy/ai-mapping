@@ -18,7 +18,7 @@ interface HomePageProps {
 
 export default function HomePage({ onStartChat }: HomePageProps) {
   const [input, setInput] = useState('');
-  const [selectedModel, setSelectedModel] = useState('google/gemini-2.5-pro');
+  const [selectedModel, setSelectedModel] = useState(AI_MODELS[0]?.id || 'google/gemini-2.0-flash-001');
 
   const examplePrompts: ExamplePrompt[] = [
     {
