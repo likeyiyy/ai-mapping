@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server';
-import { callOpenRouterAPI, prepareMessages } from '@/lib/openrouter';
+import { sendChatMessage, prepareMessages } from '@/lib/openrouter-sdk';
 
 export async function POST(request: NextRequest) {
   try {
@@ -23,60 +23,27 @@ export async function POST(request: NextRequest) {
     const messages = prepareMessages(message);
 
     if (stream) {
-      // Streaming response
-      const response = await callOpenRouterAPI(messages, model, true);
-
-      if (typeof response === 'string') {
-        // Shouldn't happen with stream=true, but handle it
-        return new Response(
-          JSON.stringify({ response }),
-          {
-            headers: { 'Content-Type': 'application/json' }
-          }
-        );
-      }
-
-      // Convert the stream to Server-Sent Events format
-      const reader = response.getReader();
-      const encoder = new TextEncoder();
-
+      // Streaming response using OpenRouter SDK
       console.log(`\n=== AI Streaming Response ===`);
-      let fullResponse = '';
 
       const readable = new ReadableStream({
         async start(controller) {
           try {
-            while (true) {
-              const { done, value } = await reader.read();
-              if (done) break;
+            await sendChatMessage(messages, model, true, (chunk) => {
+              // Print the content as it streams in
+              process.stdout.write(chunk);
 
-              const chunk = new TextDecoder().decode(value);
-              const lines = chunk.split('\n');
+              // Send to client in SSE format
+              const data = JSON.stringify({
+                choices: [{
+                  delta: { content: chunk }
+                }]
+              });
+              controller.enqueue(new TextEncoder().encode(`data: ${data}\n\n`));
+            });
 
-              for (const line of lines) {
-                if (line.startsWith('data: ')) {
-                  const data = line.slice(6);
-
-                  // Parse and log the AI output
-                  try {
-                    const parsed = JSON.parse(data);
-                    const content = parsed.choices?.[0]?.delta?.content;
-                    if (content) {
-                      fullResponse += content;
-                      // Print the content as it streams in
-                      process.stdout.write(content);
-                    }
-                  } catch (e) {
-                    // Ignore parse errors for SSE data
-                  }
-
-                  controller.enqueue(encoder.encode(`data: ${data}\n\n`));
-                }
-              }
-            }
-
-  
-            controller.enqueue(encoder.encode('data: [DONE]\n\n'));
+            // Send done signal
+            controller.enqueue(new TextEncoder().encode('data: [DONE]\n\n'));
           } catch (error) {
             console.error('Streaming error:', error);
             controller.error(error);
@@ -96,7 +63,7 @@ export async function POST(request: NextRequest) {
     } else {
       // Non-streaming response
       console.log(`\n=== AI Non-Streaming Response ===`);
-      const response = await callOpenRouterAPI(messages, model, false);
+      const response = await sendChatMessage(messages, model, false);
 
       // Log the complete response
       console.log('Response:', response);
