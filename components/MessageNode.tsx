@@ -39,6 +39,10 @@ export default function MessageNode({ id, data, selected }: MessageNodeProps) {
     if ((e.target as HTMLElement).tagName === 'BUTTON' || (e.target as HTMLElement).closest('button')) {
       return;
     }
+    // Don't set temp nodes as active
+    if (data.isNew || id.startsWith('temp-')) {
+      return;
+    }
     if (data.onNodeClick) {
       data.onNodeClick(id);
     }

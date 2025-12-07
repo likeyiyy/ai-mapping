@@ -324,10 +324,13 @@ function MindMapFlowContent({
               let parentNode: Node | undefined;
 
               if (lastActiveNodeId) {
-                // Check if the last active node is a user node
-                const nodeData = conversationTree?.nodes.get(lastActiveNodeId);
-                if (nodeData?.type === 'user') {
-                  parentNode = nodes.find(n => n.id === lastActiveNodeId);
+                // Check if the last active node is a permanent user node (not temp)
+                // Don't use temp nodes as parents
+                if (!lastActiveNodeId.startsWith('temp-')) {
+                  const nodeData = conversationTree?.nodes.get(lastActiveNodeId);
+                  if (nodeData?.type === 'user') {
+                    parentNode = nodes.find(n => n.id === lastActiveNodeId);
+                  }
                 }
               }
 
