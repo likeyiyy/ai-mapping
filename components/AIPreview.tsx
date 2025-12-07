@@ -3,7 +3,10 @@
 import { useMemo } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import rehypeHighlight from 'rehype-highlight';
 import { Bot } from 'lucide-react';
+import 'highlight.js/styles/github.css';
+import '@/styles/markdown.css';
 
 interface AIPreviewProps {
   content: string;
@@ -36,10 +39,15 @@ export default function AIPreview({ content, isVisible, style }: AIPreviewProps)
         </div>
       </div>
 
-      <div className="p-4 markdown-preview prose prose-sm max-w-none" style={{ minHeight: '100px' }}>
-        <ReactMarkdown remarkPlugins={[remarkGfm]}>
-          {processedContent}
-        </ReactMarkdown>
+      <div className="p-4 markdown-preview" style={{ minHeight: '100px' }}>
+        <div className="markdown-body prose prose-sm max-w-none">
+          <ReactMarkdown
+            remarkPlugins={[remarkGfm]}
+            rehypePlugins={[rehypeHighlight]}
+          >
+            {processedContent}
+          </ReactMarkdown>
+        </div>
       </div>
 
       </div>
