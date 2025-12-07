@@ -58,10 +58,9 @@ export default function MessageNode({ id, data, selected }: MessageNodeProps) {
           style={{ background: '#9CA3AF', width: 10, height: 10 }}
         />
         <div
-          className={`px-4 py-3 rounded-lg border-2 shadow-lg min-w-[350px] max-w-[450px] animate-pulse ${
+          className={`px-4 py-3 rounded-lg border-2 shadow-lg w-fit min-w-[200px] max-w-[450px] animate-pulse ${
             selected ? 'bg-blue-50 border-blue-600' : 'bg-blue-50 border-blue-400'
           }`}
-          style={{ minWidth: '350px' }}
         >
           <div className="flex items-center gap-2 mb-2">
             <User className="w-4 h-4 text-blue-600" />
@@ -77,7 +76,7 @@ export default function MessageNode({ id, data, selected }: MessageNodeProps) {
               window.dispatchEvent(event);
             }}
             placeholder="输入问题..."
-            className="w-full text-sm text-gray-800 bg-transparent outline-none mb-2"
+            className="w-48 text-sm text-gray-800 bg-transparent outline-none mb-2"
             autoFocus
             onKeyDown={(e) => {
               e.stopPropagation();
@@ -103,8 +102,7 @@ export default function MessageNode({ id, data, selected }: MessageNodeProps) {
                 data.onModelChange(newModel);
               }
             }}
-            className="w-full max-w-[280px] px-2 py-1 text-sm border border-gray-300 rounded bg-white text-gray-700 focus:border-blue-500 focus:outline-none"
-            style={{ width: '280px' }}
+            className="px-2 py-1 text-sm border border-gray-300 rounded bg-white text-gray-700 focus:border-blue-500 focus:outline-none"
           >
             {AI_MODELS.map(model => (
               <option key={model.id} value={model.id}>
@@ -130,12 +128,11 @@ export default function MessageNode({ id, data, selected }: MessageNodeProps) {
         style={{ background: '#9CA3AF', width: 10, height: 10 }}
       />
       <div
-        className={`relative px-4 py-3 rounded-lg border-2 shadow-lg min-w-[350px] max-w-[450px] transition-all hover:shadow-xl cursor-pointer ${
+        className={`relative px-4 py-3 rounded-lg border-2 shadow-lg w-fit min-w-[200px] max-w-[450px] transition-all hover:shadow-xl cursor-pointer ${
           selected
             ? 'bg-blue-50 border-blue-600 shadow-blue-200 shadow-lg'
             : 'bg-white border-gray-300 hover:border-gray-400 hover:shadow-md'
         }`}
-        style={{ minWidth: '350px' }}
         onClick={handleNodeClick}
       >
         <Handle

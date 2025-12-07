@@ -195,7 +195,7 @@ export default function MindMapInteractive({
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       // 响应Tab键创建新节点
-      if (e.key === 'Tab' && !editingNodeId) {
+      if (e.key === 'Tab') {
         e.preventDefault();
 
         // 找到最后一个用户节点

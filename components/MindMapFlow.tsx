@@ -63,7 +63,7 @@ function MindMapFlowContent({
     if (!userNode || userNode.type !== 'user') return null;
 
     // Find AI response
-    const aiNodeId = userNode.children.find(id => {
+    const aiNodeId = userNode.children.find((id: string) => {
       const n = conversationTree.nodes.get(id);
       return n?.type === 'assistant';
     });
@@ -97,7 +97,7 @@ function MindMapFlowContent({
 
       if (node && node.type === 'user') {
         let childY = y;
-        node.children.forEach((childId, index) => {
+        node.children.forEach((childId: string, index: number) => {
           const childNode = conversationTree.nodes.get(childId);
           if (childNode && childNode.type === 'user') {
             positionNode(childId, x + 500, childY, level + 1);
@@ -113,11 +113,11 @@ function MindMapFlowContent({
       positionNode(conversationTree.rootNode, 50, 300);
 
       // Create nodes only for user messages
-      conversationTree.nodes.forEach((node, nodeId) => {
+      conversationTree.nodes.forEach((node: any, nodeId: string) => {
         if (node.type === 'user') {
           const pos = positions.get(nodeId);
           if (pos) {
-            const aiNodeId = node.children.find(id => {
+            const aiNodeId = node.children.find((id: string) => {
               const n = conversationTree.nodes.get(id);
               return n?.type === 'assistant';
             });
@@ -154,7 +154,7 @@ function MindMapFlowContent({
     const edges: Edge[] = [];
 
     if (conversationTree) {
-      conversationTree.nodes.forEach((node, nodeId) => {
+      conversationTree.nodes.forEach((node: any, nodeId: string) => {
         // Only create edges for user nodes
         if (node.type === 'user' && node.parentId) {
           // Check if parent is also a user node
@@ -167,10 +167,7 @@ function MindMapFlowContent({
               type: 'smoothstep',
               style: { stroke: '#9CA3AF', strokeWidth: 2 },
               animated: false,
-              markerEnd: {
-                type: 'arrow',
-                color: '#9CA3AF',
-              },
+              markerEnd: 'arrow',
             });
           }
         }
@@ -185,9 +182,78 @@ function MindMapFlowContent({
 
   // Update nodes and edges when conversationTree changes
   useEffect(() => {
-    setNodes(initialNodes);
+    // Preserve selection state when updating nodes
+    setNodes(prevNodes => {
+      // Calculate new nodes from conversation tree
+      const newNodes: Node[] = [];
+      const positions = new Map<string, { x: number; y: number }>();
+
+      // Position nodes horizontally (left to right)
+      const positionNode = (nodeId: string, x: number, y: number, level: number = 0) => {
+        if (positions.has(nodeId)) return positions.get(nodeId)!;
+
+        positions.set(nodeId, { x, y });
+        const node = conversationTree.nodes.get(nodeId);
+
+        if (node && node.type === 'user') {
+          let childY = y;
+          node.children.forEach((childId: string, index: number) => {
+            const childNode = conversationTree.nodes.get(childId);
+            if (childNode && childNode.type === 'user') {
+              positionNode(childId, x + 500, childY, level + 1);
+              childY += 150;
+            }
+          });
+        }
+
+        return positions.get(nodeId)!;
+      };
+
+      if (conversationTree) {
+        positionNode(conversationTree.rootNode, 50, 300);
+
+        // Create nodes only for user messages
+        conversationTree.nodes.forEach((node: any, nodeId: string) => {
+          if (node.type === 'user') {
+            const pos = positions.get(nodeId);
+            if (pos) {
+              const aiNodeId = node.children.find((id: string) => {
+                const n = conversationTree.nodes.get(id);
+                return n?.type === 'assistant';
+              });
+
+              const aiNode = aiNodeId ? conversationTree.nodes.get(aiNodeId) : null;
+
+              // Find matching node in previous nodes to preserve selection
+              const prevNode = prevNodes.find(n => n.id === nodeId);
+
+              newNodes.push({
+                id: nodeId,
+                type: 'message',
+                position: pos,
+                data: {
+                  ...node,
+                  hasAIResponse: !!aiNode,
+                  aiResponse: aiNode?.content || null,
+                  model: aiNode?.model || null,
+                  onToggleDrawer: toggleDrawer,
+                  onNodeClick: handleNodeClick,
+                  isDrawerOpen: drawerOpenNodeId === nodeId,
+                  selectedModel: selectedModel,
+                  editingModel: editingModel,
+                  onModelChange: setEditingModel,
+                },
+                selected: prevNode?.selected || false, // Preserve selection state
+              });
+            }
+          }
+        });
+      }
+
+      return newNodes;
+    });
     setEdges(initialEdges);
-  }, [conversationTree, initialNodes, initialEdges]); // Update when conversation tree or its derived values change
+  }, [conversationTree, initialEdges, toggleDrawer, handleNodeClick, drawerOpenNodeId, selectedModel, editingModel, setEditingModel]);
 
   // Update zoom level on viewport changes
   useEffect(() => {
@@ -245,7 +311,7 @@ function MindMapFlowContent({
         setEdges(prev => prev.filter(e => e.target !== editingNodeId && e.source !== editingNodeId));
         setEditingNodeId(null);
         setEditingText('');
-        setEditingModel(null);
+        setEditingModel('');
       }
 
       // Handle Escape key for editing
@@ -316,7 +382,7 @@ function MindMapFlowContent({
           panOnScroll={false}
           onKeyDown={(event) => {
             // Handle Tab key at ReactFlow level
-            if (event.key === 'Tab' && !editingNodeId) {
+            if (event.key === 'Tab') {
               event.preventDefault();
               event.stopPropagation();
 
@@ -355,7 +421,7 @@ function MindMapFlowContent({
 
                 const existingChildren = existingChildrenIds
                   .map(childId => nodes.find(n => n.id === childId))
-                  .filter(n => n) // Filter out undefined
+                  .filter((n): n is Node => n !== undefined) // Filter out undefined
                   .sort((a, b) => a.position.y - b.position.y);
 
                 // Calculate the next Y position based on the last child or parent position
