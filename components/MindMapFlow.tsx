@@ -34,11 +34,13 @@ function MindMapFlowContent({
   onAddChild,
   selectedModel,
   isLoading,
+  streamingNodeId,
 }: {
   conversationTree: any;
   onAddChild: (parentId: string, message: string, model: string) => Promise<void>;
   selectedModel: string;
   isLoading?: boolean;
+  streamingNodeId?: string | null;
 }) {
   const [editingNodeId, setEditingNodeId] = useState<string | null>(null);
   const [editingText, setEditingText] = useState('');
@@ -133,6 +135,7 @@ function MindMapFlowContent({
                 hasAIResponse: !!aiNode,
                 aiResponse: aiNode?.content || null,
                 model: aiNode?.model || null, // 添加模型信息
+                isStreaming: aiNodeId === streamingNodeId,
                 onToggleDrawer: toggleDrawer,
                 onNodeClick: handleNodeClick,
                 isDrawerOpen: drawerOpenNodeId === nodeId,
@@ -236,6 +239,7 @@ function MindMapFlowContent({
                   hasAIResponse: !!aiNode,
                   aiResponse: aiNode?.content || null,
                   model: aiNode?.model || null,
+                  isStreaming: aiNodeId === streamingNodeId,
                   onToggleDrawer: toggleDrawer,
                   onNodeClick: handleNodeClick,
                   isDrawerOpen: drawerOpenNodeId === nodeId,
@@ -517,11 +521,13 @@ export default function MindMapFlow({
   onAddChild,
   selectedModel,
   isLoading,
+  streamingNodeId,
 }: {
   conversationTree: any;
   onAddChild: (parentId: string, message: string, model: string) => Promise<void>;
   selectedModel: string;
   isLoading?: boolean;
+  streamingNodeId?: string | null;
 }) {
   return (
     <ReactFlowProvider>
@@ -530,6 +536,7 @@ export default function MindMapFlow({
         onAddChild={onAddChild}
         selectedModel={selectedModel}
         isLoading={isLoading}
+        streamingNodeId={streamingNodeId}
       />
     </ReactFlowProvider>
   );

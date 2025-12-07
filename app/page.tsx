@@ -73,6 +73,7 @@ export default function Home() {
   const [conversationTree, setConversationTree] = useState<ConversationTree | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [selectedModel, setSelectedModel] = useState(DEFAULT_AI_MODEL);
+  const [streamingNodeId, setStreamingNodeId] = useState<string | null>(null);
 
   // Create a new conversation
   const startConversation = useCallback(async (message: string, model: string) => {
@@ -108,6 +109,9 @@ export default function Home() {
         },
         position: { x: 400, y: 0 },
       };
+
+      // Track which AI node is streaming
+      setStreamingNodeId(aiId);
 
       const newTree: ConversationTree = {
         id: generateId(),
@@ -166,6 +170,7 @@ export default function Home() {
       // You might want to show an error message to the user here
     } finally {
       setIsLoading(false);
+      setStreamingNodeId(null);
     }
   }, []);
 
@@ -210,6 +215,9 @@ export default function Home() {
       };
 
       newNode.children.push(aiId);
+
+      // Track which AI node is streaming
+      setStreamingNodeId(aiId);
 
       const updatedNodes = new Map(conversationTree.nodes);
       updatedNodes.set(childId, newNode);
@@ -270,6 +278,7 @@ export default function Home() {
       // You might want to show an error message to the user here
     } finally {
       setIsLoading(false);
+      setStreamingNodeId(null);
     }
   }, [conversationTree]);
 
@@ -318,6 +327,7 @@ export default function Home() {
           onAddChild={addChildNode}
           selectedModel={selectedModel}
           isLoading={isLoading}
+          streamingNodeId={streamingNodeId}
         />
       </div>
     </div>

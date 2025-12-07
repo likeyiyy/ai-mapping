@@ -120,6 +120,8 @@ export default function MessageNode({ id, data, selected }: MessageNodeProps) {
     );
   }
 
+  const isStreaming = data.isStreaming;
+
   return (
     <div className="relative">
       <Handle
@@ -172,6 +174,8 @@ export default function MessageNode({ id, data, selected }: MessageNodeProps) {
               className={`flex items-center gap-1 text-xs transition-colors ${
                 data.isDrawerOpen
                   ? 'text-indigo-600 hover:text-indigo-800'
+                  : isStreaming
+                  ? 'text-orange-600 hover:text-orange-800'
                   : 'text-blue-600 hover:text-blue-800'
               }`}
             >
@@ -179,12 +183,16 @@ export default function MessageNode({ id, data, selected }: MessageNodeProps) {
                 <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                 </svg>
+              ) : isStreaming ? (
+                <svg className="w-3 h-3 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
               ) : (
                 <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                 </svg>
               )}
-              {data.isDrawerOpen ? '关闭' : '查看'}回复
+              {data.isDrawerOpen ? '关闭' : isStreaming ? '回复中' : '查看回复'}
             </button>
           </div>
         )}
