@@ -255,6 +255,12 @@ export default function MindMapFlow({
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
 
+  // Update nodes and edges when conversationTree changes
+  useEffect(() => {
+    setNodes(initialNodes);
+    setEdges(initialEdges);
+  }, [initialNodes, initialEdges]);
+
   const onConnect = useCallback(
     (params: any) => setEdges((eds) => addEdge(params, eds)),
     [setEdges]
@@ -292,7 +298,18 @@ export default function MindMapFlow({
             },
           };
 
+          // Create edge immediately when node is created
+          const newEdge: Edge = {
+            id: `${lastNode.id}-${newNodeId}`,
+            source: lastNode.id,
+            target: newNodeId,
+            type: 'smoothstep',
+            style: { stroke: '#9CA3AF', strokeWidth: 2 },
+            animated: false,
+          };
+
           setNodes(prev => [...prev, newNode]);
+          setEdges(prev => [...prev, newEdge]);
           setEditingNodeId(newNodeId);
           setEditingText('');
         }
@@ -314,8 +331,16 @@ export default function MindMapFlow({
           }
         }
 
-        // Remove temp node
-        setNodes(prev => prev.filter(n => n.id !== editingNodeId));
+        // Remove temp node and its edge
+        setNodes(prev => {
+          const filtered = prev.filter(n => n.id !== editingNodeId);
+          // Find the node that would be created by API and update its position
+          return filtered.map(node => {
+            // This is a placeholder for when the API creates the actual node
+            return node;
+          });
+        });
+        setEdges(prev => prev.filter(e => e.target !== editingNodeId));
         setEditingNodeId(null);
         setEditingText('');
       }
@@ -324,6 +349,7 @@ export default function MindMapFlow({
       if (editingNodeId && e.key === 'Escape') {
         e.preventDefault();
         setNodes(prev => prev.filter(n => n.id !== editingNodeId));
+        setEdges(prev => prev.filter(e => e.target !== editingNodeId));
         setEditingNodeId(null);
         setEditingText('');
       }
@@ -331,7 +357,7 @@ export default function MindMapFlow({
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [editingNodeId, editingText, nodes, conversationTree, onAddChild, selectedModel]);
+  }, [editingNodeId, editingText, nodes, edges, conversationTree, onAddChild, selectedModel]);
 
   // Handle custom event for node editing
   useEffect(() => {
