@@ -2,7 +2,7 @@
 
 import { useCallback, useState, useMemo, useRef, useEffect } from 'react';
 import { ConversationTree, ConversationNode } from '@/lib/types';
-import { Bot, User, MessageCirclePlus, ChevronDown, ChevronRight } from 'lucide-react';
+import { Bot, User, ChevronDown, ChevronRight } from 'lucide-react';
 import AIPreview from './AIPreview';
 
 interface MindMapInteractiveProps {
@@ -35,9 +35,9 @@ export default function MindMapInteractive({
   isLoading
 }: MindMapInteractiveProps) {
   const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set());
-  const [addingChildTo, setAddingChildTo] = useState<string | null>(null);
-  const [tempMessage, setTempMessage] = useState('');
   const [hoveredNode, setHoveredNode] = useState<string | null>(null);
+  const [editingNodeId, setEditingNodeId] = useState<string | null>(null);
+  const [editingText, setEditingText] = useState('');
   const svgRef = useRef<SVGSVGElement>(null);
   const [nodePositions, setNodePositions] = useState<Map<string, NodePosition>>(new Map());
   const [dragState, setDragState] = useState<DragState>({
@@ -118,14 +118,7 @@ export default function MindMapInteractive({
     });
   }, []);
 
-  const handleAddChild = useCallback(async (parentId: string) => {
-    if (tempMessage.trim()) {
-      await onAddChild(parentId, tempMessage.trim(), selectedModel);
-      setAddingChildTo(null);
-      setTempMessage('');
-    }
-  }, [tempMessage, onAddChild, selectedModel]);
-
+  
   const handleMouseDown = useCallback((e: React.MouseEvent, nodeId: string) => {
     e.preventDefault();
     e.stopPropagation();
@@ -197,6 +190,85 @@ export default function MindMapInteractive({
 
     return null;
   };
+
+  // 添加Tab键监听
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // 响应Tab键创建新节点
+      if (e.key === 'Tab' && !editingNodeId) {
+        e.preventDefault();
+
+        // 找到最后一个用户节点
+        const nodeIds = Array.from(nodePositions.keys());
+        const userNodeIds = nodeIds.filter(id => {
+          const node = conversationTree.nodes.get(id);
+          return node?.type === 'user';
+        });
+        const lastNodeId = userNodeIds[userNodeIds.length - 1];
+
+        if (lastNodeId) {
+          // 创建一个新的临时编辑节点
+          const newNodeId = `temp-${Date.now()}`;
+          const pos = nodePositions.get(lastNodeId);
+          if (pos) {
+            setNodePositions(prev => {
+              const newMap = new Map(prev);
+              newMap.set(newNodeId, {
+                x: pos.x,
+                y: pos.y + 120, // 在父节点下方
+                width: 280,
+                height: 80
+              });
+              return newMap;
+            });
+            setEditingNodeId(newNodeId);
+            setEditingText('');
+          }
+        }
+      }
+
+      // 处理编辑模式下的回车键
+      if (editingNodeId && e.key === 'Enter') {
+        e.preventDefault();
+        if (editingText.trim()) {
+          // 找到父节点
+          const nodeIds = Array.from(nodePositions.keys());
+          const userNodeIds = nodeIds.filter(id => {
+            const node = conversationTree.nodes.get(id);
+            return node?.type === 'user';
+          });
+          const lastNodeId = userNodeIds[userNodeIds.length - 1];
+
+          if (lastNodeId) {
+            onAddChild(lastNodeId, editingText.trim(), selectedModel);
+          }
+        }
+        // 清除编辑状态
+        setEditingNodeId(null);
+        setEditingText('');
+        setNodePositions(prev => {
+          const newMap = new Map(prev);
+          newMap.delete(editingNodeId!);
+          return newMap;
+        });
+      }
+
+      // 处理编辑模式下的Esc键
+      if (editingNodeId && e.key === 'Escape') {
+        e.preventDefault();
+        setEditingNodeId(null);
+        setEditingText('');
+        setNodePositions(prev => {
+          const newMap = new Map(prev);
+          newMap.delete(editingNodeId!);
+          return newMap;
+        });
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [editingNodeId, editingText, nodePositions, selectedModel, conversationTree, onAddChild]);
 
   // 添加全局鼠标事件监听
   useEffect(() => {
@@ -328,7 +400,12 @@ export default function MindMapInteractive({
             const dynamicHeight = Math.max(pos.height, 80);
 
             return (
-              <g key={nodeId}>
+              <g key={nodeId}
+                 onMouseEnter={() => setHoveredNode(nodeId)}
+                 onMouseLeave={() => setHoveredNode(null)}
+                 onMouseDown={(e) => handleMouseDown(e, nodeId)}
+                 style={{ cursor: dragState.isDragging && dragState.nodeId === nodeId ? 'grabbing' : 'grab' }}
+              >
                 {/* 节点背景 */}
                 <rect
                   x={pos.x}
@@ -339,10 +416,8 @@ export default function MindMapInteractive({
                   fill="#EFF6FF"
                   stroke="#3B82F6"
                   strokeWidth={isHovered ? 3 : 2}
-                  className="cursor-pointer transition-all"
-                  onMouseEnter={() => setHoveredNode(nodeId)}
-                  onMouseLeave={() => setHoveredNode(null)}
-                  onMouseDown={(e) => handleMouseDown(e, nodeId)}
+                  className="transition-all"
+                  pointerEvents="none"
                 />
 
                 {/* 节点内容 */}
@@ -351,12 +426,17 @@ export default function MindMapInteractive({
                   y={pos.y + 10}
                   width={pos.width - 20}
                   height={dynamicHeight - 20}
+                  pointerEvents="none"
                 >
-                  <div className="h-full flex flex-col">
+                  <div
+                    className="h-full flex flex-col"
+                    style={{ pointerEvents: 'none' }}
+                  >
                     {/* 上部分：用户文本内容 */}
                     <div
                       className="flex items-start gap-2 pb-2 cursor-pointer"
                       onClick={() => needsTruncation && toggleNodeExpand(nodeId)}
+                      style={{ pointerEvents: 'auto' }}
                     >
                       <User className="w-4 h-4 text-blue-600 mt-0.5 flex-shrink-0" />
                       <div className="flex-1 min-w-0">
@@ -373,7 +453,10 @@ export default function MindMapInteractive({
 
                     {/* 下部分：AI模型和按钮 */}
                     {hasAINode && (
-                      <div className="flex items-center justify-between gap-2 mt-auto pt-2 border-t border-blue-100">
+                      <div
+                        className="flex items-center justify-between gap-2 mt-auto pt-2 border-t border-blue-100"
+                        style={{ pointerEvents: 'auto' }}
+                      >
                         <div className="flex items-center gap-2">
                           {aiModel && (
                             <span className="text-xs px-2 py-1 bg-gray-100 rounded text-gray-600 font-medium">
@@ -399,87 +482,53 @@ export default function MindMapInteractive({
                     )}
                   </div>
                 </foreignObject>
-
-                {/* 添加按钮 */}
-                {isHovered && (
-                  <g
-                    className="cursor-pointer"
-                    onClick={() => setAddingChildTo(nodeId)}
-                  >
-                    <circle
-                      cx={pos.x + pos.width - 15}
-                      cy={pos.y + dynamicHeight - 15}
-                      r="12"
-                      fill="#3B82F6"
-                      className="hover:opacity-80 transition-opacity"
-                    />
-                    <MessageCirclePlus
-                      x={pos.x + pos.width - 21}
-                      y={pos.y + dynamicHeight - 21}
-                      width={12}
-                      height={12}
-                      color="white"
-                    />
-                  </g>
-                )}
-
-                {/* 添加子节点输入框 */}
-                {addingChildTo === nodeId && (
-                  <foreignObject
-                    x={pos.x + pos.width + 20}
-                    y={pos.y}
-                    width={280}
-                    height={100}
-                  >
-                    <div className="bg-white rounded-lg shadow-xl border border-gray-200 p-3">
-                      <input
-                        type="text"
-                        value={tempMessage}
-                        onChange={(e) => setTempMessage(e.target.value)}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Tab') {
-                            e.preventDefault();
-                            // Tab键创建新节点
-                            if (tempMessage.trim()) {
-                              handleAddChild(nodeId);
-                            }
-                          } else if ((e.key === 'Enter' && e.ctrlKey) || (e.key === 'Enter' && e.metaKey)) {
-                            // Ctrl+Enter 或 Cmd+Enter 提交
-                            e.preventDefault();
-                            handleAddChild(nodeId);
-                          } else if (e.key === 'Escape') {
-                            setAddingChildTo(null);
-                            setTempMessage('');
-                          }
-                        }}
-                        placeholder="输入追问内容..."
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        autoFocus
-                      />
-                      <div className="flex gap-2 mt-2">
-                        <button
-                          onClick={() => handleAddChild(nodeId)}
-                          disabled={!tempMessage.trim() || isLoading}
-                          className="px-3 py-1 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-xs"
-                        >
-                          发送
-                        </button>
-                        <button
-                          onClick={() => {
-                            setAddingChildTo(null);
-                            setTempMessage('');
-                          }}
-                          className="px-3 py-1 text-gray-600 hover:text-gray-800 transition-colors text-xs"
-                        >
-                          取消
-                        </button>
-                      </div>
-                    </div>
-                  </foreignObject>
-                )}
               </g>
             );
           })}
+
+          {/* 渲染编辑中的临时节点 */}
+          {editingNodeId && (
+            <g key={editingNodeId}>
+              <rect
+                x={nodePositions.get(editingNodeId)?.x || 0}
+                y={nodePositions.get(editingNodeId)?.y || 0}
+                width={280}
+                height={80}
+                rx="8"
+                fill="#F0F9FF"
+                stroke="#3B82F6"
+                strokeWidth="2"
+                strokeDasharray="5,5"
+                className="animate-pulse"
+              />
+              <foreignObject
+                x={(nodePositions.get(editingNodeId)?.x || 0) + 10}
+                y={(nodePositions.get(editingNodeId)?.y || 0) + 10}
+                width={260}
+                height={60}
+              >
+                <div className="h-full flex items-center">
+                  <User className="w-4 h-4 text-blue-600 mr-2 flex-shrink-0" />
+                  <input
+                    type="text"
+                    value={editingText}
+                    onChange={(e) => setEditingText(e.target.value)}
+                    onKeyDown={(e) => {
+                      e.stopPropagation();
+                      if (e.key === 'Enter') {
+                        // 回车键由全局处理
+                      } else if (e.key === 'Escape') {
+                        // Esc键由全局处理
+                      }
+                    }}
+                    placeholder="输入问题..."
+                    className="flex-1 text-sm bg-transparent outline-none"
+                    autoFocus
+                  />
+                </div>
+              </foreignObject>
+            </g>
+          )}
         </g>
       </svg>
 

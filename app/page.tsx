@@ -6,6 +6,7 @@ import { AI_MODELS, DEFAULT_AI_MODEL } from '@/lib/constants';
 import ChatInput from '@/components/ChatInput';
 import HomePage from '@/components/HomePage';
 import MindMapInteractive from '@/components/MindMapInteractive';
+import MindMapFlow from '@/components/MindMapFlow';
 import { generateId } from 'ai';
 import { GitBranch } from 'lucide-react';
 // Function to call our API route with streaming support
@@ -73,6 +74,7 @@ export default function Home() {
   const [conversationTree, setConversationTree] = useState<ConversationTree | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [selectedModel, setSelectedModel] = useState(DEFAULT_AI_MODEL);
+  const [useFlowView, setUseFlowView] = useState(false); // Toggle between views
 
   // Create a new conversation
   const startConversation = useCallback(async (message: string, model: string) => {
@@ -292,16 +294,41 @@ export default function Home() {
       <header className="bg-white/80 backdrop-blur-sm shadow-sm border-b border-gray-200 fixed top-0 left-0 right-0 z-40">
         <div className="max-w-7xl mx-auto px-6 py-3">
           <div className="flex items-center justify-between">
-            <button
-              onClick={() => setConversationTree(null)}
-              className="flex items-center gap-3 hover:bg-gray-100/50 rounded-lg px-3 py-2 -ml-3 transition-colors"
-              title="返回首页"
-            >
-              <div className="w-8 h-8 bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg flex items-center justify-center">
-                <GitBranch className="w-5 h-5 text-white" />
+            <div className="flex items-center gap-4">
+              <button
+                onClick={() => setConversationTree(null)}
+                className="flex items-center gap-3 hover:bg-gray-100/50 rounded-lg px-3 py-2 -ml-3 transition-colors"
+                title="返回首页"
+              >
+                <div className="w-8 h-8 bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg flex items-center justify-center">
+                  <GitBranch className="w-5 h-5 text-white" />
+                </div>
+                <h1 className="text-xl font-bold text-gray-900">AI 对话思维导图</h1>
+              </button>
+              {/* Toggle between views */}
+              <div className="flex items-center gap-2 bg-gray-100 rounded-lg p-1">
+                <button
+                  onClick={() => setUseFlowView(false)}
+                  className={`px-3 py-1 rounded text-sm transition-colors ${
+                    !useFlowView
+                      ? 'bg-white text-gray-900 shadow-sm'
+                      : 'text-gray-600 hover:text-gray-900'
+                  }`}
+                >
+                  SVG
+                </button>
+                <button
+                  onClick={() => setUseFlowView(true)}
+                  className={`px-3 py-1 rounded text-sm transition-colors ${
+                    useFlowView
+                      ? 'bg-white text-gray-900 shadow-sm'
+                      : 'text-gray-600 hover:text-gray-900'
+                  }`}
+                >
+                  React Flow
+                </button>
               </div>
-              <h1 className="text-xl font-bold text-gray-900">AI 对话思维导图</h1>
-            </button>
+            </div>
             <div className="text-sm text-gray-600">
               {conversationTree.title}
             </div>
@@ -311,12 +338,21 @@ export default function Home() {
 
       {/* MindMap Container */}
       <div className="pt-16">
-        <MindMapInteractive
-          conversationTree={conversationTree}
-          onAddChild={addChildNode}
-          selectedModel={selectedModel}
-          isLoading={isLoading}
-        />
+        {useFlowView ? (
+          <MindMapFlow
+            conversationTree={conversationTree}
+            onAddChild={addChildNode}
+            selectedModel={selectedModel}
+            isLoading={isLoading}
+          />
+        ) : (
+          <MindMapInteractive
+            conversationTree={conversationTree}
+            onAddChild={addChildNode}
+            selectedModel={selectedModel}
+            isLoading={isLoading}
+          />
+        )}
       </div>
     </div>
   );
