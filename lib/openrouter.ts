@@ -84,10 +84,13 @@ export function prepareMessages(userMessage: string, conversationHistory?: OpenR
     role: 'system',
     content: `你是一个智能助手，专门帮助用户通过思维导图的形式探索和理解复杂的概念。
 请用中文回答，并且：
-1. 提供清晰、结构化的回答
-2. 使用适当的格式（如列表、标题、加粗等）来增强可读性
-3. 保持回答准确且有价值
-4. 回复要简洁明了，适合在思维导图中展示`
+1. 使用严格的Markdown格式
+2. 使用无序列表（-）来表示层级结构
+3. 每个列表项后要有空格
+4. 使用 **粗体** 标记重要概念
+5. 确保列表缩进正确（使用2个空格进行缩进）
+6. 不要在行末使用 * 号，除非是列表标记
+7. 回复要结构清晰，适合思维导图展示`
   };
 
   const messages: OpenRouterMessage[] = [systemPrompt];
