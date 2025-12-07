@@ -14,6 +14,7 @@ const openrouter = createOpenAI({
 
 // 支持的模型列表
 const MODELS = {
+  'google/gemini-2.0-flash-001': 'Google Gemini 2.0 Flash',
   'google/gemini-2.5-pro': 'Google Gemini 2.5 Pro',
   'google/gemini-2.5-flash': 'Google Gemini 2.5 Flash',
   'google/gemini-3-pro-preview': 'Google Gemini 3 Pro Preview',
@@ -22,7 +23,7 @@ const MODELS = {
 };
 
 export async function POST(req: Request) {
-  const { messages, model = 'google/gemini-2.5-pro' } = await req.json();
+  const { messages, model = 'google/gemini-2.0-flash-001' } = await req.json();
 
   const result = await streamText({
     model: openrouter(model) as any,

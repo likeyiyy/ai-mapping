@@ -3,6 +3,13 @@ import { AIModel } from './types';
 // 可用的AI模型列表
 export const AI_MODELS: AIModel[] = [
   {
+    id: 'google/gemini-2.0-flash-001',
+    name: 'Google Gemini 2.0 Flash',
+    provider: 'Google',
+    maxTokens: 1048576,
+    costPerToken: 0.000001,
+  },
+  {
     id: 'google/gemini-2.5-pro',
     name: 'Google Gemini 2.5 Pro',
     provider: 'Google',
