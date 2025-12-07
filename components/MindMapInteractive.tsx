@@ -110,17 +110,23 @@ export default function MindMapInteractive({
 
   const handleMouseDown = useCallback((e: React.MouseEvent, nodeId: string) => {
     e.preventDefault();
+    e.stopPropagation();
+
     const rect = svgRef.current?.getBoundingClientRect();
     if (!rect) return;
 
     const pos = nodePositions.get(nodeId);
     if (!pos) return;
 
+    // 记录鼠标相对于节点的位置
+    const offsetX = e.clientX - rect.left - pos.x;
+    const offsetY = e.clientY - rect.top - pos.y;
+
     setDragState({
       isDragging: true,
       nodeId,
-      startX: e.clientX - rect.left - pos.x,
-      startY: e.clientY - rect.top - pos.y,
+      startX: offsetX,
+      startY: offsetY,
       currentX: pos.x,
       currentY: pos.y
     });
@@ -165,8 +171,61 @@ export default function MindMapInteractive({
 
     const aiNodeId = userNode.children[0];
     const aiNode = conversationTree.nodes.get(aiNodeId);
-    return aiNode?.content || null;
+
+    // 即使内容为空字符串，也要显示AI节点，因为流式响应正在加载
+    if (aiNode) {
+      return aiNode.content || null;
+    }
+
+    return null;
   };
+
+  // 添加全局鼠标事件监听
+  useEffect(() => {
+    const handleGlobalMouseUp = () => {
+      if (dragState.isDragging) {
+        setDragState({
+          isDragging: false,
+          nodeId: null,
+          startX: 0,
+          startY: 0,
+          currentX: 0,
+          currentY: 0
+        });
+      }
+    };
+
+    const handleGlobalMouseMove = (e: MouseEvent) => {
+      if (!dragState.isDragging || !dragState.nodeId) return;
+
+      const rect = svgRef.current?.getBoundingClientRect();
+      if (!rect) return;
+
+      const newX = e.clientX - rect.left - dragState.startX;
+      const newY = e.clientY - rect.top - dragState.startY;
+
+      setNodePositions(prev => {
+        const newMap = new Map(prev);
+        const pos = newMap.get(dragState.nodeId!);
+        if (pos) {
+          newMap.set(dragState.nodeId!, { ...pos, x: newX, y: newY });
+        }
+        return newMap;
+      });
+
+      setDragState(prev => ({ ...prev, currentX: newX, currentY: newY }));
+    };
+
+    if (dragState.isDragging) {
+      window.addEventListener('mouseup', handleGlobalMouseUp);
+      window.addEventListener('mousemove', handleGlobalMouseMove);
+    }
+
+    return () => {
+      window.removeEventListener('mouseup', handleGlobalMouseUp);
+      window.removeEventListener('mousemove', handleGlobalMouseMove);
+    };
+  }, [dragState]);
 
   return (
     <div className="w-full h-screen overflow-auto bg-gradient-to-br from-slate-50 to-blue-50/30 relative">
@@ -235,7 +294,7 @@ export default function MindMapInteractive({
 
             const isHovered = hoveredNode === nodeId;
             const isExpanded = expandedNodes.has(nodeId);
-            const hasAIResponse = getAIResponse(nodeId) !== null;
+            const hasAINode = node.children.length > 0;
             const aiResponse = getAIResponse(nodeId);
 
             return (
@@ -270,7 +329,7 @@ export default function MindMapInteractive({
                         <p className="text-sm text-gray-800 font-medium line-clamp-2">
                           {node.content}
                         </p>
-                        {hasAIResponse && (
+                        {hasAINode && (
                           <button
                             onClick={() => toggleNodeExpand(nodeId)}
                             className="mt-2 flex items-center gap-1 text-xs text-blue-600 hover:text-blue-800"
@@ -291,17 +350,17 @@ export default function MindMapInteractive({
                 {/* AI回复展开内容 */}
                 {isExpanded && aiResponse && (
                   <foreignObject
-                    x={pos.x}
+                    x={pos.x - 100}
                     y={pos.y + pos.height + 10}
-                    width={pos.width + 100}
-                    height={200}
+                    width={pos.width + 400}
+                    height={400}
                   >
-                    <div className="bg-white rounded-lg shadow-lg border border-gray-200 p-4 max-h-48 overflow-y-auto">
+                    <div className="bg-white rounded-lg shadow-lg border border-gray-200 p-4 max-h-96 overflow-y-auto w-full min-w-[400px] text-left">
                       <div className="flex items-start gap-2 mb-2">
                         <Bot className="w-4 h-4 text-emerald-600 mt-0.5 flex-shrink-0" />
                         <span className="text-xs font-medium text-emerald-600">AI 回复</span>
                       </div>
-                      <div className="prose prose-sm max-w-none text-gray-800">
+                      <div className="prose prose-sm max-w-none text-gray-800 prose-headings:text-left prose-p:text-left prose-ul:text-left prose-ol:text-left prose-blockquote:text-left">
                         <ReactMarkdown remarkPlugins={[remarkGfm]}>
                           {aiResponse}
                         </ReactMarkdown>
@@ -347,7 +406,14 @@ export default function MindMapInteractive({
                         value={tempMessage}
                         onChange={(e) => setTempMessage(e.target.value)}
                         onKeyDown={(e) => {
-                          if (e.key === 'Enter' && !e.shiftKey) {
+                          if (e.key === 'Tab') {
+                            e.preventDefault();
+                            // Tab键创建新节点
+                            if (tempMessage.trim()) {
+                              handleAddChild(nodeId);
+                            }
+                          } else if ((e.key === 'Enter' && e.ctrlKey) || (e.key === 'Enter' && e.metaKey)) {
+                            // Ctrl+Enter 或 Cmd+Enter 提交
                             e.preventDefault();
                             handleAddChild(nodeId);
                           } else if (e.key === 'Escape') {
