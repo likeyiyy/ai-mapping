@@ -1,13 +1,16 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { ConversationNode, ConversationTree } from '@/lib/types';
 import { AI_MODELS, DEFAULT_AI_MODEL } from '@/lib/constants';
 import ChatInput from '@/components/ChatInput';
 import HomePage from '@/components/HomePage';
 import MindMapFlow from '@/components/MindMapFlow';
+import ConversationActions from '@/components/ConversationActions';
 import { generateId } from 'ai';
 import { GitBranch } from 'lucide-react';
+import { useConversationPersistence } from '@/hooks/useConversationPersistence';
+import toast from 'react-hot-toast';
 // Function to call our API route with streaming support
 async function callChatAPI(
   message: string,
@@ -74,6 +77,24 @@ export default function Home() {
   const [isLoading, setIsLoading] = useState(false);
   const [selectedModel, setSelectedModel] = useState(DEFAULT_AI_MODEL);
   const [streamingNodeId, setStreamingNodeId] = useState<string | null>(null);
+
+  // Initialize persistence hook
+  const {
+    saveConversationManual,
+    loadAllConversations,
+    loadConversation,
+    createNewConversation,
+    deleteConversation,
+  } = useConversationPersistence({
+    conversationTree,
+    setConversationTree,
+    onSaveSuccess: (message) => {
+      // Success messages are shown in ConversationActions component
+    },
+    onSaveError: (error) => {
+      toast.error(error);
+    },
+  });
 
   // Create a new conversation
   const startConversation = useCallback(async (message: string, model: string) => {
@@ -303,7 +324,7 @@ export default function Home() {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               <button
-                onClick={() => setConversationTree(null)}
+                onClick={createNewConversation}
                 className="flex items-center gap-3 hover:bg-gray-100/50 rounded-lg px-3 py-2 -ml-3 transition-colors"
                 title="返回首页"
               >
@@ -312,10 +333,16 @@ export default function Home() {
                 </div>
                 <h1 className="text-xl font-bold text-gray-900">AI 对话思维导图</h1>
               </button>
+              <div className="text-sm text-gray-600">
+                {conversationTree.title}
+              </div>
             </div>
-            <div className="text-sm text-gray-600">
-              {conversationTree.title}
-            </div>
+            <ConversationActions
+              conversationTree={conversationTree}
+              onLoadConversation={(conv) => setConversationTree(conv)}
+              onNewConversation={createNewConversation}
+              className="flex items-center gap-2"
+            />
           </div>
         </div>
       </header>
