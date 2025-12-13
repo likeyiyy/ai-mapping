@@ -113,36 +113,44 @@ export default function ChatPage() {
           newTree.nodes.set(userNode.id, userNode);
           newTree.nodes.set(aiNode.id, aiNode);
 
-          // 设置对话树
+          // 设置对话树 - 立即显示界面（显示"回复中"状态）
           setConversationTree(newTree);
+          
+          // 立即停止加载状态，显示界面
+          setIsLoadingConversation(false);
 
-          // 先保存节点到数据库
-          try {
-            const { saveConversation } = await import('@/lib/api/conversations');
-            const saveResult = await saveConversation(newTree);
-            if (!saveResult.success) {
-              console.error('Failed to save initial nodes:', saveResult.error);
-              toast.error('保存节点失败: ' + saveResult.error);
-            } else {
-              console.log('Initial nodes saved successfully');
+          // 先保存节点到数据库（异步，不阻塞）
+          (async () => {
+            try {
+              const { saveConversation } = await import('@/lib/api/conversations');
+              const saveResult = await saveConversation(newTree);
+              if (!saveResult.success) {
+                console.error('Failed to save initial nodes:', saveResult.error);
+                toast.error('保存节点失败: ' + saveResult.error);
+              } else {
+                console.log('Initial nodes saved successfully');
+              }
+            } catch (saveError) {
+              console.error('Error saving initial nodes:', saveError);
+              toast.error('保存节点时出错');
             }
-          } catch (saveError) {
-            console.error('Error saving initial nodes:', saveError);
-            toast.error('保存节点时出错');
-          }
+          })();
 
-          // 执行流式聊天
-          await executeStreamingChatRef.current(message, model, aiNode.id);
+          // 执行流式聊天（异步，不阻塞界面显示）
+          executeStreamingChatRef.current(message, model, aiNode.id).catch((error) => {
+            console.error('Error in streaming chat:', error);
+            toast.error('AI 回复失败: ' + (error instanceof Error ? error.message : String(error)));
+          });
         } else {
           // 正常加载已有对话
           console.log('Conversation loaded with', result.nodes.size, 'nodes');
+          setIsLoadingConversation(false);
         }
       } catch (error) {
         console.error('Error loading conversation:', error);
         toast.error('加载对话失败: ' + (error instanceof Error ? error.message : String(error)));
-        router.push('/');
-      } finally {
         setIsLoadingConversation(false);
+        router.push('/');
       }
     };
 
