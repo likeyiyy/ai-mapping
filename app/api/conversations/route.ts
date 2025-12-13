@@ -18,7 +18,7 @@ export async function POST(request: NextRequest) {
         id: conversationId,
         title: body.title || body.message.slice(0, 50) + (body.message.length > 50 ? '...' : ''),
         rootNode: '', // 将在前端创建节点时设置
-        nodes: {}, // 初始为空，将在前端创建节点时填充
+        nodes: new Map(), // 初始为空 Map，将在前端创建节点时填充
         layout: 'tree',
         createdAt: new Date(),
         updatedAt: new Date(),

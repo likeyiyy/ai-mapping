@@ -3,6 +3,7 @@
  * 处理 AI 对话的流式响应和状态更新
  */
 import { useCallback } from 'react';
+import type React from 'react';
 import { ConversationTree, ConversationNode } from '@/lib/types';
 import { callChatAPI } from '@/lib/api/chat';
 import { updateAINodeContent } from '@/lib/utils/conversation';
@@ -10,7 +11,7 @@ import toast from 'react-hot-toast';
 
 interface UseStreamingChatOptions {
   conversationTree: ConversationTree | null;
-  setConversationTree: (tree: ConversationTree | null) => void;
+  setConversationTree: React.Dispatch<React.SetStateAction<ConversationTree | null>>;
   setIsLoading: (loading: boolean) => void;
   setStreamingNodeId: (id: string | null) => void;
 }
