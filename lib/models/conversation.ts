@@ -29,11 +29,21 @@ export interface ConversationTreeDB {
 }
 
 // Convert Map to object for MongoDB storage
-export function serializeMap(map: Map<string, any>): Record<string, any> {
+export function serializeMap(map: Map<string, any> | Record<string, any>): Record<string, any> {
   const obj: Record<string, any> = {};
-  for (const [key, value] of map.entries()) {
-    obj[key] = value;
+
+  // Check if it's already a plain object
+  if (map && typeof map === 'object' && !(map instanceof Map)) {
+    return map as Record<string, any>;
   }
+
+  // Handle Map case
+  if (map instanceof Map) {
+    for (const [key, value] of map.entries()) {
+      obj[key] = value;
+    }
+  }
+
   return obj;
 }
 

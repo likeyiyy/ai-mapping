@@ -3,7 +3,17 @@
 import { useState } from 'react';
 import { Save, FolderOpen, Plus, Trash2, CheckCircle, AlertCircle } from 'lucide-react';
 import { ConversationTree } from '@/lib/types';
-import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubTrigger,
+  DropdownMenuSubContent,
+  DropdownMenuPortal
+} from '@radix-ui/react-dropdown-menu';
 import toast from 'react-hot-toast';
 
 interface ConversationActionsProps {
