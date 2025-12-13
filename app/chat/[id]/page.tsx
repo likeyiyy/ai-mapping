@@ -4,7 +4,6 @@ import { useState, useCallback, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { ConversationNode, ConversationTree } from '@/lib/types';
 import { AI_MODELS, DEFAULT_AI_MODEL } from '@/lib/constants';
-import ChatInput from '@/components/ChatInput';
 import MindMapFlow from '@/components/MindMapFlow';
 import ConversationActions from '@/components/ConversationActions';
 import { generateId } from 'ai';
@@ -80,17 +79,13 @@ export default function ChatPage() {
   
   const [conversationTree, setConversationTree] = useState<ConversationTree | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [selectedModel, setSelectedModel] = useState(DEFAULT_AI_MODEL);
+  const [selectedModel] = useState(DEFAULT_AI_MODEL);
   const [streamingNodeId, setStreamingNodeId] = useState<string | null>(null);
   const [isLoadingConversation, setIsLoadingConversation] = useState(true);
 
   // Initialize persistence hook
   const {
-    saveConversationManual,
-    loadAllConversations,
     loadConversation,
-    createNewConversation,
-    deleteConversation,
   } = useConversationPersistence({
     conversationTree,
     setConversationTree,
@@ -233,14 +228,6 @@ export default function ChatPage() {
     }
   }, [conversationTree]);
 
-  // Handle new message (when user clicks on a node to continue conversation)
-  const handleMessage = useCallback(async (message: string, model?: string) => {
-    const actualModel = model || selectedModel;
-    if (conversationTree) {
-      // This should not happen in chat page, but just in case
-      console.warn('Unexpected message in chat page without parent node');
-    }
-  }, [conversationTree, selectedModel]);
 
   // Show loading state while loading conversation
   if (isLoadingConversation) {

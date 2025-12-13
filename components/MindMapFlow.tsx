@@ -10,10 +10,6 @@ import ReactFlow, {
   Panel,
   useReactFlow,
   ReactFlowProvider,
-  NodeChange,
-  EdgeChange,
-  applyNodeChanges,
-  applyEdgeChanges,
 } from 'reactflow';
 import { Controls } from '@reactflow/controls';
 import { Background } from '@reactflow/background';
@@ -21,7 +17,6 @@ import { MiniMap } from '@reactflow/minimap';
 import 'reactflow/dist/style.css';
 import AIDrawer from './AIDrawer';
 import MessageNode from './MessageNode';
-import { DEFAULT_AI_MODEL } from '@/lib/constants';
 
 // Node types
 const nodeTypes = {

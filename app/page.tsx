@@ -1,10 +1,9 @@
 'use client';
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { ConversationNode, ConversationTree } from '@/lib/types';
 import { AI_MODELS, DEFAULT_AI_MODEL } from '@/lib/constants';
-import ChatInput from '@/components/ChatInput';
 import HomePage from '@/components/HomePage';
 import MindMapFlow from '@/components/MindMapFlow';
 import ConversationActions from '@/components/ConversationActions';
@@ -82,11 +81,8 @@ export default function Home() {
 
   // Initialize persistence hook
   const {
-    saveConversationManual,
-    loadAllConversations,
     loadConversation,
     createNewConversation,
-    deleteConversation,
   } = useConversationPersistence({
     conversationTree,
     setConversationTree,
