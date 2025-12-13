@@ -71,7 +71,9 @@ export function convertDBTreeToFrontend(tree: any): ConversationTree {
     nodes: nodes,
     layout: tree.layout,
     createdAt: new Date(tree.createdAt),
-    updatedAt: new Date(tree.updatedAt)
+    updatedAt: new Date(tree.updatedAt),
+    initialMessage: tree.initialMessage,
+    initialModel: tree.initialModel
   };
 }
 
@@ -173,6 +175,34 @@ export async function deleteConversation(id: string): Promise<ApiResponse<null>>
     return {
       success: false,
       error: 'Failed to delete conversation'
+    };
+  }
+}
+
+/**
+ * 创建初始对话（包含 message 和 model）
+ * 后端会生成 UUID 并返回，同时保存 message 和 model 到数据库
+ */
+export async function createInitialConversation(message: string, model: string): Promise<ApiResponse<{ id: string }>> {
+  try {
+    const response = await fetch('/api/conversations', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        message,
+        model,
+        title: message.slice(0, 50) + (message.length > 50 ? '...' : ''),
+      }),
+    });
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    return {
+      success: false,
+      error: 'Failed to create conversation'
     };
   }
 }

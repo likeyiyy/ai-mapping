@@ -1,76 +1,21 @@
 'use client';
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { ConversationNode, ConversationTree } from '@/lib/types';
-import { AI_MODELS, DEFAULT_AI_MODEL } from '@/lib/constants';
+import { ConversationTree } from '@/lib/types';
+import { DEFAULT_AI_MODEL } from '@/lib/constants';
 import MindMapFlow from '@/components/MindMapFlow';
 import ConversationActions from '@/components/ConversationActions';
-import { generateId } from 'ai';
 import { GitBranch } from 'lucide-react';
 import { useConversationPersistence } from '@/hooks/useConversationPersistence';
+import { useStreamingChat } from '@/hooks/useStreamingChat';
+import { useConversationActions } from '@/hooks/useConversationActions';
+import {
+  createUserNode,
+  createAINode,
+  createConversationTree,
+} from '@/lib/utils/conversation';
 import toast from 'react-hot-toast';
-
-// Function to call our API route with streaming support
-async function callChatAPI(
-  message: string,
-  model: string,
-  onChunk?: (chunk: string) => void
-): Promise<string> {
-  const response = await fetch('/api/chat/completion', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({ message, model, stream: !!onChunk }),
-  });
-
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({ error: 'Unknown error' }));
-    throw new Error(`API error: ${response.status} - ${error.error || 'Unknown error'}`);
-  }
-
-  if (onChunk) {
-    // Handle streaming response
-    const reader = response.body?.getReader();
-    const decoder = new TextDecoder();
-    let fullResponse = '';
-
-    if (reader) {
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-
-        const chunk = decoder.decode(value, { stream: true });
-        const lines = chunk.split('\n');
-
-        for (const line of lines) {
-          if (line.startsWith('data: ')) {
-            const data = line.slice(6);
-            if (data === '[DONE]') continue;
-
-            try {
-              const parsed = JSON.parse(data);
-              const content = parsed.choices?.[0]?.delta?.content || '';
-              if (content) {
-                fullResponse += content;
-                onChunk(content);
-              }
-            } catch (e) {
-              // Ignore parsing errors
-            }
-          }
-        }
-      }
-    }
-
-    return fullResponse;
-  } else {
-    // Non-streaming response
-    const data = await response.json();
-    return data.response;
-  }
-}
 
 export default function ChatPage() {
   const params = useParams();
@@ -82,14 +27,15 @@ export default function ChatPage() {
   const [selectedModel] = useState(DEFAULT_AI_MODEL);
   const [streamingNodeId, setStreamingNodeId] = useState<string | null>(null);
   const [isLoadingConversation, setIsLoadingConversation] = useState(true);
+  
+  // 使用 ref 跟踪是否已经初始化，防止无限循环
+  const hasInitialized = useRef(false);
 
   // Initialize persistence hook
-  const {
-    loadConversation,
-  } = useConversationPersistence({
+  const { loadConversation } = useConversationPersistence({
     conversationTree,
     setConversationTree,
-    onSaveSuccess: (message) => {
+    onSaveSuccess: () => {
       // Success messages are shown in ConversationActions component
     },
     onSaveError: (error) => {
@@ -97,136 +43,118 @@ export default function ChatPage() {
     },
   });
 
-  // Load conversation on mount
+  // Initialize streaming chat hook
+  const { executeStreamingChat } = useStreamingChat({
+    conversationTree,
+    setConversationTree,
+    setIsLoading,
+    setStreamingNodeId,
+  });
+
+  // Initialize conversation actions hook
+  const { addChildNode } = useConversationActions({
+    conversationTree,
+    setConversationTree,
+    executeStreamingChat,
+  });
+
+  // 使用 ref 存储函数引用，避免依赖项变化导致循环
+  const executeStreamingChatRef = useRef(executeStreamingChat);
+  const loadConversationRef = useRef(loadConversation);
+  
   useEffect(() => {
-    const loadConversationData = async () => {
-      if (conversationId) {
-        try {
-          const result = await loadConversation(conversationId);
-          if (!result) {
-            toast.error('对话未找到');
-            router.push('/');
-          }
-        } catch (error) {
-          console.error('Error loading conversation:', error);
-          toast.error('加载对话失败');
+    executeStreamingChatRef.current = executeStreamingChat;
+  }, [executeStreamingChat]);
+  
+  useEffect(() => {
+    loadConversationRef.current = loadConversation;
+  }, [loadConversation]);
+
+  // Load conversation on mount and handle initial message if needed
+  useEffect(() => {
+    // 防止重复初始化
+    if (hasInitialized.current) return;
+    
+    const initializeConversation = async () => {
+      if (!conversationId) return;
+
+      hasInitialized.current = true;
+
+      try {
+        // 加载对话
+        const result = await loadConversationRef.current(conversationId);
+        if (!result) {
+          console.error('Conversation not found:', conversationId);
+          toast.error('对话未找到');
           router.push('/');
-        } finally {
-          setIsLoadingConversation(false);
+          return;
         }
-      }
-    };
 
-    loadConversationData();
-  }, [conversationId, loadConversation, router]);
-
-  // Add child node to existing node
-  const addChildNode = useCallback(async (parentId: string, message: string, model: string) => {
-    if (!conversationTree) return;
-
-    setIsLoading(true);
-
-    const childId = generateId();
-    const modelDisplayName = AI_MODELS.find(m => m.id === model)?.name || model;
-
-    // Create user node
-    const newNode: ConversationNode = {
-      id: childId,
-      type: 'user',
-      content: message,
-      parentId,
-      children: [],
-      metadata: {
-        timestamp: new Date(),
-      },
-      position: { x: 0, y: 0 },
-    };
-
-    try {
-      // Get AI response
-      const aiId = generateId();
-
-      // Create AI node with empty content initially
-      const aiNode: ConversationNode = {
-        id: aiId,
-        type: 'assistant',
-        content: '',
-        model: modelDisplayName,
-        parentId: childId,
-        children: [],
-        metadata: {
-          timestamp: new Date(),
-        },
-        position: { x: 400, y: 0 },
-      };
-
-      newNode.children.push(aiId);
-
-      // Track which AI node is streaming
-      setStreamingNodeId(aiId);
-
-      const updatedNodes = new Map(conversationTree.nodes);
-      updatedNodes.set(childId, newNode);
-      updatedNodes.set(aiId, aiNode);
-
-      // Update parent node
-      const parentNode = updatedNodes.get(parentId);
-      if (parentNode) {
-        parentNode.children.push(childId);
-        updatedNodes.set(parentId, parentNode);
-      }
-
-      // Show the tree immediately with empty AI response
-      setConversationTree({
-        ...conversationTree,
-        nodes: updatedNodes,
-        updatedAt: new Date(),
-      });
-
-      // Call OpenRouter API with streaming
-      const aiResponse = await callChatAPI(message, model, (chunk) => {
-        // Update the AI node content as chunks arrive
-        setConversationTree(prev => {
-          if (!prev) return prev;
-          const newNodes = new Map(prev.nodes);
-          const currentAINode = newNodes.get(aiId);
-          if (currentAINode) {
-            newNodes.set(aiId, {
-              ...currentAINode,
-              content: currentAINode.content + chunk
-            });
-          }
-          return {
-            ...prev,
-            nodes: newNodes
-          };
+        console.log('Loaded conversation:', {
+          id: result.id,
+          nodesCount: result.nodes.size,
+          hasInitialMessage: !!result.initialMessage,
+          rootNode: result.rootNode
         });
-      });
 
-      // Final update to ensure full content is set
-      setConversationTree(prev => {
-        if (!prev) return prev;
-        const newNodes = new Map(prev.nodes);
-        const currentAINode = newNodes.get(aiId);
-        if (currentAINode) {
-          newNodes.set(aiId, {
-            ...currentAINode,
-            content: aiResponse
-          });
+        // 检查是否有初始消息但还没有节点（首次创建会话）
+        if (result.initialMessage && result.nodes.size === 0) {
+          console.log('Creating initial nodes for conversation:', conversationId);
+          const message = result.initialMessage;
+          const model = result.initialModel || DEFAULT_AI_MODEL;
+
+          // 创建节点
+          const userNode = createUserNode(message, null);
+          const aiNode = createAINode(model, userNode.id, '');
+          userNode.children.push(aiNode.id);
+
+          // 创建对话树（使用后端返回的 UUID）
+          const newTree = createConversationTree(message, userNode.id, aiNode.id, conversationId);
+          newTree.nodes.set(userNode.id, userNode);
+          newTree.nodes.set(aiNode.id, aiNode);
+
+          // 设置对话树
+          setConversationTree(newTree);
+
+          // 先保存节点到数据库
+          try {
+            const { saveConversation } = await import('@/lib/api/conversations');
+            const saveResult = await saveConversation(newTree);
+            if (!saveResult.success) {
+              console.error('Failed to save initial nodes:', saveResult.error);
+              toast.error('保存节点失败: ' + saveResult.error);
+            } else {
+              console.log('Initial nodes saved successfully');
+            }
+          } catch (saveError) {
+            console.error('Error saving initial nodes:', saveError);
+            toast.error('保存节点时出错');
+          }
+
+          // 执行流式聊天
+          await executeStreamingChatRef.current(message, model, aiNode.id);
+        } else {
+          // 正常加载已有对话
+          console.log('Conversation loaded with', result.nodes.size, 'nodes');
         }
-        return {
-          ...prev,
-          nodes: newNodes
-        };
-      });
-    } catch (error) {
-      console.error('Error calling OpenRouter API:', error);
-      // You might want to show an error message to the user here
-    } finally {
-      setIsLoading(false);
-      setStreamingNodeId(null);
-    }
-  }, [conversationTree]);
+      } catch (error) {
+        console.error('Error loading conversation:', error);
+        toast.error('加载对话失败: ' + (error instanceof Error ? error.message : String(error)));
+        router.push('/');
+      } finally {
+        setIsLoadingConversation(false);
+      }
+    };
+
+    initializeConversation();
+    
+    // 当 conversationId 改变时重置初始化标志
+    return () => {
+      hasInitialized.current = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [conversationId]); // 只依赖 conversationId，使用 ref 避免循环依赖
+
 
 
   // Show loading state while loading conversation

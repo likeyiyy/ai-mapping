@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "init-db": "ts-node scripts/init-db.ts"
   },
   "dependencies": {
     "@ai-sdk/openai": "^2.0.77",
@@ -54,6 +55,7 @@
     "@types/uuid": "^10.0.0",
     "eslint": "^9",
     "eslint-config-next": "16.0.7",
+    "ts-node": "^10.9.2",
     "typescript": "^5"
   }
 }

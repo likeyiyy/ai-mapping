@@ -1,6 +1,6 @@
 import { useCallback, useEffect } from 'react';
 import { ConversationTree } from '@/lib/types';
-import { saveConversation, updateConversation, getAllConversations } from '@/lib/api/conversations';
+import { saveConversation, updateConversation, getAllConversations, getConversation } from '@/lib/api/conversations';
 
 interface UseConversationPersistenceProps {
   conversationTree: ConversationTree | null;
@@ -17,7 +17,10 @@ export function useConversationPersistence({
 }: UseConversationPersistenceProps) {
   // Auto-save conversation when it changes
   const saveConversationChanges = useCallback(async () => {
-    if (!conversationTree || conversationTree.nodes.size === 0) return;
+    if (!conversationTree || conversationTree.nodes.size === 0) {
+      console.log('Skipping save: no conversation tree or empty nodes');
+      return;
+    }
 
     try {
       // Check if this is a new conversation (no nodes with content from AI yet)
@@ -25,18 +28,24 @@ export function useConversationPersistence({
         node => node.type === 'assistant' && node.content.length > 0
       );
 
-      if (!hasAIResponse) return; // Don't save until we have an AI response
+      if (!hasAIResponse) {
+        console.log('Skipping save: no AI response yet');
+        return; // Don't save until we have an AI response
+      }
 
+      console.log('Auto-saving conversation:', conversationTree.id, 'with', conversationTree.nodes.size, 'nodes');
       const result = await saveConversation(conversationTree);
 
       if (result.success) {
+        console.log('Conversation saved successfully');
         onSaveSuccess?.(result.message || 'Conversation saved successfully');
       } else {
+        console.error('Failed to save conversation:', result.error);
         onSaveError?.(result.error || 'Failed to save conversation');
       }
     } catch (error) {
       console.error('Error saving conversation:', error);
-      onSaveError?.('Failed to save conversation');
+      onSaveError?.('Failed to save conversation: ' + (error instanceof Error ? error.message : String(error)));
     }
   }, [conversationTree, onSaveSuccess, onSaveError]);
 
@@ -82,17 +91,14 @@ export function useConversationPersistence({
   // Load a specific conversation
   const loadConversation = useCallback(async (id: string) => {
     try {
-      const result = await getAllConversations();
+      const result = await getConversation(id);
 
       if (result.success && result.data) {
-        const conversation = result.data.find(conv => conv.id === id);
-        if (conversation) {
-          setConversationTree(conversation);
-          return conversation;
-        }
+        setConversationTree(result.data);
+        return result.data;
       }
 
-      onSaveError?.('Conversation not found');
+      onSaveError?.(result.error || 'Conversation not found');
       return null;
     } catch (error) {
       console.error('Error loading conversation:', error);

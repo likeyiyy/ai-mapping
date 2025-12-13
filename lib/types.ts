@@ -23,6 +23,8 @@ export interface ConversationTree {
   layout: 'tree' | 'radial' | 'force';
   createdAt: Date;
   updatedAt: Date;
+  initialMessage?: string; // 初始消息（用于首次创建会话）
+  initialModel?: string; // 初始模型（用于首次创建会话）
 }
 
 // AI模型配置

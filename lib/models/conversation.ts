@@ -26,6 +26,8 @@ export interface ConversationTreeDB {
   createdAt: Date;
   updatedAt: Date;
   userId?: string; // For future multi-user support
+  initialMessage?: string; // 初始消息（用于首次创建会话）
+  initialModel?: string; // 初始模型（用于首次创建会话）
 }
 
 // Convert Map to object for MongoDB storage
@@ -100,15 +102,25 @@ export class ConversationService {
     if (!doc) return null;
 
     // Convert nodes object back to Map and ensure all required fields are present
+    // Handle case where nodes might be empty object or Map
+    let nodesMap: Map<string, ConversationNodeDB>;
+    if (!doc.nodes || (typeof doc.nodes === 'object' && Object.keys(doc.nodes).length === 0)) {
+      nodesMap = new Map();
+    } else {
+      nodesMap = deserializeMap(doc.nodes);
+    }
+
     return {
       id: doc.id,
       title: doc.title,
       rootNode: doc.rootNode,
-      nodes: deserializeMap(doc.nodes),
+      nodes: nodesMap,
       layout: doc.layout || 'tree',
       createdAt: new Date(doc.createdAt),
       updatedAt: new Date(doc.updatedAt),
       userId: doc.userId,
+      initialMessage: doc.initialMessage,
+      initialModel: doc.initialModel,
       _id: doc._id
     };
   }
@@ -129,6 +141,8 @@ export class ConversationService {
       createdAt: new Date(doc.createdAt),
       updatedAt: new Date(doc.updatedAt),
       userId: doc.userId,
+      initialMessage: doc.initialMessage,
+      initialModel: doc.initialModel,
       _id: doc._id
     }));
   }
