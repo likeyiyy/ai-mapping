@@ -1,17 +1,17 @@
 'use client';
 
 import { useState, useCallback, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import { ConversationNode, ConversationTree } from '@/lib/types';
 import { AI_MODELS, DEFAULT_AI_MODEL } from '@/lib/constants';
 import ChatInput from '@/components/ChatInput';
-import HomePage from '@/components/HomePage';
 import MindMapFlow from '@/components/MindMapFlow';
 import ConversationActions from '@/components/ConversationActions';
 import { generateId } from 'ai';
 import { GitBranch } from 'lucide-react';
 import { useConversationPersistence } from '@/hooks/useConversationPersistence';
 import toast from 'react-hot-toast';
+
 // Function to call our API route with streaming support
 async function callChatAPI(
   message: string,
@@ -73,12 +73,16 @@ async function callChatAPI(
   }
 }
 
-export default function Home() {
+export default function ChatPage() {
+  const params = useParams();
   const router = useRouter();
+  const conversationId = params.id as string;
+  
   const [conversationTree, setConversationTree] = useState<ConversationTree | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [selectedModel, setSelectedModel] = useState(DEFAULT_AI_MODEL);
   const [streamingNodeId, setStreamingNodeId] = useState<string | null>(null);
+  const [isLoadingConversation, setIsLoadingConversation] = useState(true);
 
   // Initialize persistence hook
   const {
@@ -98,109 +102,28 @@ export default function Home() {
     },
   });
 
-  // Create a new conversation
-  const startConversation = useCallback(async (message: string, model: string) => {
-    setIsLoading(true);
-    const userId = generateId();
-    const aiId = generateId();
-    const modelDisplayName = AI_MODELS.find(m => m.id === model)?.name || model;
-
-    // Create user node
-    const userNode: ConversationNode = {
-      id: userId,
-      type: 'user',
-      content: message,
-      parentId: null,
-      children: [aiId],
-      metadata: {
-        timestamp: new Date(),
-      },
-      position: { x: 0, y: 0 },
+  // Load conversation on mount
+  useEffect(() => {
+    const loadConversationData = async () => {
+      if (conversationId) {
+        try {
+          const result = await loadConversation(conversationId);
+          if (!result) {
+            toast.error('对话未找到');
+            router.push('/');
+          }
+        } catch (error) {
+          console.error('Error loading conversation:', error);
+          toast.error('加载对话失败');
+          router.push('/');
+        } finally {
+          setIsLoadingConversation(false);
+        }
+      }
     };
 
-    try {
-      // Create AI node with empty content initially
-      const aiNode: ConversationNode = {
-        id: aiId,
-        type: 'assistant',
-        content: '',
-        model: modelDisplayName,
-        parentId: userId,
-        children: [],
-        metadata: {
-          timestamp: new Date(),
-        },
-        position: { x: 400, y: 0 },
-      };
-
-      // Track which AI node is streaming
-      setStreamingNodeId(aiId);
-
-      const newTree: ConversationTree = {
-        id: generateId(),
-        title: message.slice(0, 50) + (message.length > 50 ? '...' : ''),
-        rootNode: userId,
-        nodes: new Map([
-          [userId, userNode],
-          [aiId, aiNode],
-        ]),
-        layout: 'tree',
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
-
-      // Show the tree immediately with empty AI response
-      setConversationTree(newTree);
-
-      // Call OpenRouter API with streaming
-      const aiResponse = await callChatAPI(message, model, (chunk) => {
-        // Update the AI node content as chunks arrive
-        setConversationTree(prev => {
-          if (!prev) return prev;
-          const updatedNodes = new Map(prev.nodes);
-          const currentAINode = updatedNodes.get(aiId);
-          if (currentAINode) {
-            updatedNodes.set(aiId, {
-              ...currentAINode,
-              content: currentAINode.content + chunk
-            });
-          }
-          return {
-            ...prev,
-            nodes: updatedNodes
-          };
-        });
-      });
-
-      // Final update to ensure full content is set
-      setConversationTree(prev => {
-        if (!prev) return prev;
-        const updatedNodes = new Map(prev.nodes);
-        const currentAINode = updatedNodes.get(aiId);
-        if (currentAINode) {
-          updatedNodes.set(aiId, {
-            ...currentAINode,
-            content: aiResponse
-          });
-        }
-        const updatedTree = {
-          ...prev,
-          nodes: updatedNodes
-        };
-        
-        // Navigate to the new chat page after conversation is created
-        router.push(`/chat/${updatedTree.id}`);
-        
-        return updatedTree;
-      });
-    } catch (error) {
-      console.error('Error calling OpenRouter API:', error);
-      // You might want to show an error message to the user here
-    } finally {
-      setIsLoading(false);
-      setStreamingNodeId(null);
-    }
-  }, [router]);
+    loadConversationData();
+  }, [conversationId, loadConversation, router]);
 
   // Add child node to existing node
   const addChildNode = useCallback(async (parentId: string, message: string, model: string) => {
@@ -310,17 +233,49 @@ export default function Home() {
     }
   }, [conversationTree]);
 
-  // Handle new message
+  // Handle new message (when user clicks on a node to continue conversation)
   const handleMessage = useCallback(async (message: string, model?: string) => {
     const actualModel = model || selectedModel;
-    if (!conversationTree) {
-      await startConversation(message, actualModel);
+    if (conversationTree) {
+      // This should not happen in chat page, but just in case
+      console.warn('Unexpected message in chat page without parent node');
     }
-  }, [conversationTree, selectedModel, startConversation, router]);
+  }, [conversationTree, selectedModel]);
 
-  // If no conversation tree, show home page
+  // Show loading state while loading conversation
+  if (isLoadingConversation) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-16 h-16 bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg flex items-center justify-center mx-auto mb-4">
+            <GitBranch className="w-8 h-8 text-white animate-spin" />
+          </div>
+          <h2 className="text-xl font-semibold text-gray-900 mb-2">加载对话中...</h2>
+          <p className="text-gray-600">请稍等，正在加载您的对话内容</p>
+        </div>
+      </div>
+    );
+  }
+
+  // If no conversation tree loaded, show error
   if (!conversationTree) {
-    return <HomePage onStartChat={handleMessage} />;
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-16 h-16 bg-red-100 rounded-lg flex items-center justify-center mx-auto mb-4">
+            <GitBranch className="w-8 h-8 text-red-600" />
+          </div>
+          <h2 className="text-xl font-semibold text-gray-900 mb-2">对话未找到</h2>
+          <p className="text-gray-600 mb-4">无法找到您要查看的对话，可能已被删除或链接错误</p>
+          <button
+            onClick={() => router.push('/')}
+            className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-6 py-2 rounded-lg transition-all"
+          >
+            返回首页
+          </button>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -331,7 +286,7 @@ export default function Home() {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               <button
-                onClick={createNewConversation}
+                onClick={() => router.push('/')}
                 className="flex items-center gap-3 hover:bg-gray-100/50 rounded-lg px-3 py-2 -ml-3 transition-colors"
                 title="返回首页"
               >
@@ -350,7 +305,7 @@ export default function Home() {
                 setConversationTree(conv);
                 router.push(`/chat/${conv.id}`);
               }}
-              onNewConversation={createNewConversation}
+              onNewConversation={() => router.push('/')}
               className="flex items-center gap-2"
             />
           </div>

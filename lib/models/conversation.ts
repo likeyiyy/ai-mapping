@@ -99,10 +99,16 @@ export class ConversationService {
 
     if (!doc) return null;
 
-    // Convert nodes object back to Map
+    // Convert nodes object back to Map and ensure all required fields are present
     return {
-      ...doc,
+      id: doc.id,
+      title: doc.title,
+      rootNode: doc.rootNode,
       nodes: deserializeMap(doc.nodes),
+      layout: doc.layout || 'tree',
+      createdAt: new Date(doc.createdAt),
+      updatedAt: new Date(doc.updatedAt),
+      userId: doc.userId,
       _id: doc._id
     };
   }
@@ -115,8 +121,14 @@ export class ConversationService {
     const docs = await collection.find(filter).sort({ updatedAt: -1 }).toArray();
 
     return docs.map(doc => ({
-      ...doc,
+      id: doc.id,
+      title: doc.title,
+      rootNode: doc.rootNode,
       nodes: deserializeMap(doc.nodes),
+      layout: doc.layout || 'tree',
+      createdAt: new Date(doc.createdAt),
+      updatedAt: new Date(doc.updatedAt),
+      userId: doc.userId,
       _id: doc._id
     }));
   }
